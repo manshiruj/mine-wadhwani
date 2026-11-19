@@ -1,5 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mine_wadhwani/core/routing/app_router.gr.dart';
 import 'package:mine_wadhwani/presentation/bloc/auth_bloc/auth_bloc.dart';
@@ -12,6 +14,7 @@ import 'package:mine_wadhwani/presentation/screens/pending_inspections/pending_i
 import 'package:mine_wadhwani/presentation/screens/profile/profile_screen.dart';
 import 'package:mine_wadhwani/presentation/screens/risk_analysis/risk_analysis_screen.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:mine_wadhwani/presentation/screens/home/emergency_contacts_sheet.dart';
 
 @RoutePage()
 class HomePage extends StatelessWidget {
@@ -217,7 +220,7 @@ class HomePage extends StatelessWidget {
                             ],
                           ),
                           ElevatedButton.icon(
-                            onPressed: () {},
+                            onPressed: () => EmergencyContactsSheet.show(context),
                             icon: const Icon(Icons.phone_in_talk_rounded,
                                 size: 15),
                             label: const Text(
@@ -341,45 +344,9 @@ class HomePage extends StatelessWidget {
             ),
             const Spacer(),
 
-            // Online badge — now reactive
-              StreamBuilder<List<ConnectivityResult>>(
-                stream: Connectivity().onConnectivityChanged,
-                initialData: const [ConnectivityResult.none],
-                builder: (context, snapshot) {
-                  final results = snapshot.data ?? [ConnectivityResult.none];
-                  final isOnline = !results.contains(ConnectivityResult.none);
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white12,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        width: 0.8,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          isOnline ? Icons.wifi : Icons.wifi_off,
-                          color: isOnline ? Colors.greenAccent : Colors.redAccent,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          isOnline ? 'ONLINE' : 'OFFLINE',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+            const _ConnectivityIndicator(),
+            const SizedBox(width: 8),
+            const _ToolsMenuButton(),
             const SizedBox(width: 12),
 
             // Notification bell
@@ -689,3 +656,135 @@ class _DashboardCard {
     required this.description,
   });
 }
+
+
+class _ConnectivityIndicator extends StatefulWidget {
+  const _ConnectivityIndicator();
+
+  @override
+  State<_ConnectivityIndicator> createState() => _ConnectivityIndicatorState();
+}
+
+class _ConnectivityIndicatorState extends State<_ConnectivityIndicator>
+    with SingleTickerProviderStateMixin {
+  bool _isOnline = true;
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+
+    Connectivity().checkConnectivity().then((result) {
+      if (mounted) {
+        setState(() => _isOnline = !result.contains(ConnectivityResult.none));
+      }
+    });
+
+    Connectivity().onConnectivityChanged.listen((results) {
+      if (mounted) {
+        setState(() => _isOnline = !results.contains(ConnectivityResult.none));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: _isOnline ? 'Online' : 'Offline',
+      child: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          final opacity = _isOnline ? 1.0 : 0.5 + (_pulseController.value * 0.5);
+          return Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white12,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+                width: 0.8,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              _isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+              size: 16,
+              color: (_isOnline ? Colors.greenAccent : Colors.redAccent)
+                  .withValues(alpha: opacity),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ToolsMenuButton extends StatelessWidget {
+  const _ToolsMenuButton();
+
+  Future<void> _openShieldMine() async {
+    final uri = Uri.parse('https://shield-mine.onrender.com');
+    final canLaunch = await canLaunchUrl(uri);
+    debugPrint('Can launch Shield Mine URL: $canLaunch');
+    if (canLaunch) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint('Failed to launch — canLaunchUrl returned false');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'External tools',
+      offset: const Offset(0, 44),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      color: Colors.white,
+      icon: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: Colors.white12,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.15),
+            width: 0.8,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.apps_rounded, size: 16, color: Colors.white),
+      ),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'shield_mine',
+          child: Row(
+            children: const [
+              Icon(Icons.analytics_outlined, size: 17, color: Colors.black54),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Shield Mine — Accident Analysis',
+                    style: TextStyle(fontSize: 13)),
+              ),
+              Icon(Icons.open_in_new_rounded, size: 14, color: Colors.black38),
+            ],
+          ),
+        ),
+      ],
+      onSelected: (value) {
+        if (value == 'shield_mine') _openShieldMine();
+      },
+    );
+  }
+}
+

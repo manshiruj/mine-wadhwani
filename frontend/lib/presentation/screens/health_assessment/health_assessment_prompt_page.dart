@@ -8,6 +8,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mine_wadhwani/data/models/drone_analysis_result.dart';
 import 'package:mine_wadhwani/data/datasources/health_assessment/drone_analysis_datasource.dart';
 import 'package:mine_wadhwani/presentation/screens/health_assessment/annotated_image.dart';
+import 'package:mine_wadhwani/data/models/health_assessment/risk_index_calculator.dart';
+import 'package:mine_wadhwani/data/models/health_assessment/critical_condition_checker.dart';
+import 'package:mine_wadhwani/presentation/screens/health_assessment/critical_alert_screen.dart';
+import 'package:mine_wadhwani/data/datasources/health_assessment/aqm_remote_datasource.dart';
 
 
 class HealthAssessmentPromptPage extends StatefulWidget {
@@ -40,7 +44,7 @@ class _HealthAssessmentPromptPageState
   bool _zoneWasAutoSelected = false;
   final Set<String> _selectedModes = {};
 
-  final AqmDataSource _aqmDataSource = MockAqmDataSource();
+  final AqmDataSource _aqmDataSource = AqmRemoteDataSource();
   bool _isFetchingAqm = false;
   String? _aqmFetchError;
   AqmReading? _lastAqmReading;
@@ -156,6 +160,7 @@ class _HealthAssessmentPromptPageState
         _lastAqmReading = reading;
         _isFetchingAqm = false;
       });
+      _checkForCriticalCondition();
     } on AqmFetchException catch (e) {
       setState(() {
         _aqmFetchError = e.message;
@@ -204,6 +209,7 @@ class _HealthAssessmentPromptPageState
         _lastDroneResult = result;
         _isAnalyzingDrone = false;
       });
+      _checkForCriticalCondition();
     } on DroneAnalysisException catch (e) {
       setState(() {
         _droneAnalysisError = e.message;
@@ -292,18 +298,24 @@ class _HealthAssessmentPromptPageState
 
   int get _liveFlagCount {
     int count = 0;
-    for (final id in _workerIds) {
-      final hr = _workerHrControllers[id]?.text ?? '';
-      final spo2 = _workerSpo2Controllers[id]?.text ?? '';
-      if (_isHrFlagged(hr) || _isSpo2Flagged(spo2)) count++;
+    if (_selectedModes.contains('Smartwatch')) {
+      for (final id in _workerIds) {
+        final hr = _workerHrControllers[id]?.text ?? '';
+        final spo2 = _workerSpo2Controllers[id]?.text ?? '';
+        if (_isHrFlagged(hr) || _isSpo2Flagged(spo2)) count++;
+      }
     }
-    for (final field in _aqmFields) {
-      final value = _aqmController(field).text;
-      if (_isAqmFieldFlagged(field, value)) count++;
+    if (_selectedModes.contains('AQM')) {
+      for (final field in _aqmFields) {
+        final value = _aqmController(field).text;
+        if (_isAqmFieldFlagged(field, value)) count++;
+      }
     }
-     for (final field in _droneFields) {
-      final value = _droneController(field).text;
-      if (_isDroneFieldFlagged(field, value)) count++;
+    if (_selectedModes.contains('Drone')) {
+      for (final field in _droneFields) {
+        final value = _droneController(field).text;
+        if (_isDroneFieldFlagged(field, value)) count++;
+      }
     }
     return count;
   }
@@ -349,6 +361,7 @@ class _HealthAssessmentPromptPageState
       modes: _selectedModes.toList(),
       aqmReadings: aqmReadings,
       droneReadings: droneReadings,
+      droneImageBytes: _droneImageBytes,
       workerReadings: workerReadings,
       notes: _notesController.text.trim(),
       assessedAt: DateTime.now(),
@@ -953,17 +966,27 @@ Widget _buildAqmCard() {
             ),
           ),
           const SizedBox(height: 10),
-          _flaggableField(
-            controller: _workerHrControllers[id]!,
-            label: 'Heart Rate (bpm)',
-            isFlagged: () => _isHrFlagged(_workerHrControllers[id]!.text),
-            flagMessage: 'Outside safe range (${HealthThresholds.minHeartRate.toInt()}–${HealthThresholds.maxHeartRate.toInt()} bpm)',
+          Focus(
+            onFocusChange: (hasFocus) {
+              if (!hasFocus) _checkForCriticalCondition();
+            },
+            child: _flaggableField(
+              controller: _workerHrControllers[id]!,
+              label: 'Heart Rate (bpm)',
+              isFlagged: () => _isHrFlagged(_workerHrControllers[id]!.text),
+              flagMessage: 'Outside safe range (${HealthThresholds.minHeartRate.toInt()}–${HealthThresholds.maxHeartRate.toInt()} bpm)',
+            ),
           ),
-          _flaggableField(
-            controller: _workerSpo2Controllers[id]!,
-            label: 'SpO2 (%)',
-            isFlagged: () => _isSpo2Flagged(_workerSpo2Controllers[id]!.text),
-            flagMessage: 'Below safe oxygen level (< ${HealthThresholds.minSpo2.toInt()}%)',
+          Focus(
+            onFocusChange: (hasFocus) {
+              if (!hasFocus) _checkForCriticalCondition();
+            },
+            child: _flaggableField(
+              controller: _workerSpo2Controllers[id]!,
+              label: 'SpO2 (%)',
+              isFlagged: () => _isSpo2Flagged(_workerSpo2Controllers[id]!.text),
+              flagMessage: 'Below safe oxygen level (< ${HealthThresholds.minSpo2.toInt()}%)',
+            ),
           ),
         ],
       ),
@@ -1116,6 +1139,52 @@ Widget _flaggableField({
     );
   }
 
+  HealthAssessmentModel _buildSnapshotModel() {
+    final aqmSnapshot = <String, String>{};
+    for (final field in _aqmFields) {
+      final text = _aqmController(field).text.trim();
+      if (text.isNotEmpty) aqmSnapshot[field] = text;
+    }
+    final droneSnapshot = <String, String>{};
+    for (final field in _droneFields) {
+      final text = _droneController(field).text.trim();
+      if (text.isNotEmpty) droneSnapshot[field] = text;
+    }
+    final workerSnapshot = <WorkerReading>[];
+    for (final id in _workerIds) {
+      final name = _workerNameControllers[id]?.text.trim() ?? '';
+      final hr = _workerHrControllers[id]?.text.trim() ?? '';
+      final spo2 = _workerSpo2Controllers[id]?.text.trim() ?? '';
+      if (name.isNotEmpty || hr.isNotEmpty || spo2.isNotEmpty) {
+        workerSnapshot.add(WorkerReading(name: name, heartRate: hr, spo2: spo2));
+      }
+    }
+
+    return HealthAssessmentModel(
+      conducted: true,
+      zone: _selectedZone ?? '',
+      modes: _selectedModes.toList(),
+      aqmReadings: aqmSnapshot,
+      droneReadings: droneSnapshot,
+      workerReadings: workerSnapshot,
+      notes: '',
+      assessedAt: DateTime.now(),
+    );
+  }
+
+  void _checkForCriticalCondition() {
+    final snapshot = _buildSnapshotModel();
+    final alert = CriticalConditionChecker.check(snapshot);
+    if (alert != null && mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CriticalAlertScreen(alert: alert),
+          fullscreenDialog: true,
+        ),
+      );
+    }
+  }
+
   void _showRiskSummary() {
     final details = <String>[];
     for (final id in _workerIds) {
@@ -1125,18 +1194,22 @@ Widget _flaggableField({
       if (_isHrFlagged(hr)) details.add('$name — Heart rate outside safe range');
       if (_isSpo2Flagged(spo2)) details.add('$name — Low SpO2');
     }
-    for (final field in _aqmFields) {
-      final value = _aqmController(field).text;
-      if (_isAqmFieldFlagged(field, value)) details.add('AQM — $field outside safe limit');
+    if (_selectedModes.contains('AQM')) {
+      for (final field in _aqmFields) {
+        final value = _aqmController(field).text;
+        if (_isAqmFieldFlagged(field, value)) details.add('AQM — $field outside safe limit');
+      }
     }
 
     final totalChecks = _workerIds.length * 2 + _aqmFields.length;
+    final riskIndex = RiskIndexCalculator.calculate(_buildSnapshotModel());
 
     RiskSummarySheet.show(
       context,
       flagCount: _liveFlagCount,
       totalChecks: totalChecks,
       flagDetails: details,
+      riskIndex: riskIndex,
     );
   }
 }

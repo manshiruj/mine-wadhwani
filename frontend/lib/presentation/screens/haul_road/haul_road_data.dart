@@ -41,6 +41,7 @@ class HaulRoadData {
           code: 'Q2.2',
           text:
               'Is the road surface structurally sound and free from severe potholes, ruts, deep corrugated ripples, and large loose boulders?',
+          aiAnalysisType: AiAnalysisType.roadDefect,
         ),
         InspectionQuestion(
           code: 'Q2.3',
@@ -51,6 +52,7 @@ class HaulRoadData {
           code: 'Q2.4',
           text:
               'Are any concrete or paved sections free from structural cracks and major surface subsidence?',
+          aiAnalysisType: AiAnalysisType.roadDefect,
         ),
       ],
     ),

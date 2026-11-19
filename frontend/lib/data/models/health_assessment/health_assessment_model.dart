@@ -1,53 +1,4 @@
-// class HealthAssessmentModel {
-//   final bool conducted;
-//   final String zone;
-//   final List<String> modes; // e.g. ['AQM', 'Drone', 'Smartwatch']
-//   final Map<String, String> readings; // e.g. {'PM2.5': '120 µg/m³', 'CO': '3 ppm'}
-//   final String notes;
-//   final DateTime assessedAt;
-
-//   const HealthAssessmentModel({
-//     required this.conducted,
-//     required this.zone,
-//     required this.modes,
-//     required this.readings,
-//     required this.notes,
-//     required this.assessedAt,
-//   });
-
-//   factory HealthAssessmentModel.skipped() => HealthAssessmentModel(
-//         conducted: false,
-//         zone: '',
-//         modes: const [],
-//         readings: const {},
-//         notes: '',
-//         assessedAt: DateTime.now(),
-//       );
-
-//   Map<String, dynamic> toJson() => {
-//         'conducted': conducted,
-//         'zone': zone,
-//         'modes': modes,
-//         'readings': readings,
-//         'notes': notes,
-//         'assessedAt': assessedAt.toIso8601String(),
-//       };
-
-//   factory HealthAssessmentModel.fromJson(Map<String, dynamic> json) {
-//     return HealthAssessmentModel(
-//       conducted: json['conducted'] as bool? ?? false,
-//       zone: json['zone'] as String? ?? '',
-//       modes: (json['modes'] as List?)?.map((e) => e.toString()).toList() ?? [],
-//       readings: (json['readings'] as Map?)?.map(
-//             (k, v) => MapEntry(k.toString(), v.toString()),
-//           ) ??
-//           {},
-//       notes: json['notes'] as String? ?? '',
-//       assessedAt: DateTime.tryParse(json['assessedAt'] as String? ?? '') ??
-//           DateTime.now(),
-//     );
-//   }
-// }
+import 'dart:typed_data';
 
 class HealthThresholds {
   // General thresholds
@@ -69,6 +20,16 @@ class HealthThresholds {
   static const double maxTemperature = 35; // °C
 
   static const double minPpeCompliancePercent = 80; // flag if below 80%
+
+  // Critical tier — stricter than the "flagged" limits above.
+  // Crossing these triggers the full-screen emergency alert.
+  static const double criticalMinHeartRate = 40;
+  static const double criticalMaxHeartRate = 160;
+  static const double criticalMinSpo2 = 85;
+
+  static const double criticalMaxCo = 100; // 2× DGMS TLV
+  static const double criticalMaxH2s = 15; // 3× DGMS TLV — H2S lethality escalates fast
+  static const double criticalMaxMethane = 1.25; // DGMS limit for "any part of mine"
 }
 
 class WorkerReading {
@@ -115,6 +76,7 @@ class HealthAssessmentModel {
   final List<String> modes; // e.g. ['AQM', 'Drone', 'Smartwatch']
   final Map<String, String> aqmReadings; // PM2.5, CO, Dust Level
   final Map<String, String> droneReadings; // Thermal Flag, PPE Compliance, Observation
+  final Uint8List? droneImageBytes; // annotated drone photo, for report display
   final List<WorkerReading> workerReadings; // one entry per worker checked
   final String notes;
   final DateTime assessedAt;
@@ -125,6 +87,7 @@ class HealthAssessmentModel {
     required this.modes,
     required this.aqmReadings,
     required this.droneReadings,
+    this.droneImageBytes,
     required this.workerReadings,
     required this.notes,
     required this.assessedAt,

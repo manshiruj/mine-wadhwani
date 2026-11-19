@@ -1,9 +1,3 @@
-// lib/presentation/screens/common/inspection_checklist_page.dart
-//
-// Generic checklist page used by ALL inspection types.
-// Pass the sections list from HaulRoadData.sections or StockpileData.sections
-// (after migrating stockpile to InspectionSection — see migration note below).
-
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +7,11 @@ import 'package:mine_wadhwani/core/theme/app_colors.dart';
 import 'package:mine_wadhwani/core/theme/app_text_styles.dart';
 import 'package:mine_wadhwani/presentation/screens/common/inspection_section.dart';
 import 'package:mine_wadhwani/presentation/screens/stockpile/action_page.dart';
+import 'dart:typed_data';
+import 'package:mine_wadhwani/data/datasources/health_assessment/road_defect_datasource.dart';
+import 'package:mine_wadhwani/data/models/road_defect_result.dart';
+import 'package:mine_wadhwani/presentation/screens/health_assessment/annotated_image.dart';
+import 'package:mine_wadhwani/data/models/drone_analysis_result.dart';  
 
 // ignore_for_file: library_private_types_in_public_api
 
@@ -62,6 +61,13 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
   final Set<String> _savedNotes = <String>{};
   final Map<String, TextEditingController> _controllers = {};
   final ImagePicker _imagePicker = ImagePicker();
+
+  // AI road defect analysis
+  final RoadDefectDataSource _roadDefectDataSource = RoadDefectRemoteDataSource();
+  final Map<String, RoadDefectResult> _aiResults = {};
+  final Map<String, bool> _aiAnalyzing = {};
+  final Map<String, String?> _aiErrors = {};
+  final Set<String> _contradictionAcknowledged = {};
 
   // ─── Init / Dispose ───────────────────────────────────────────────────────
 
@@ -236,6 +242,62 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
             .showSnackBar(SnackBar(content: Text('Gallery error: $e')));
       }
     }
+  }
+
+    Future<void> _analyzeForDefects(String code) async {
+    final mediaList = _mediaFiles[code] ?? [];
+    if (mediaList.isEmpty) return;
+
+    setState(() {
+      _aiAnalyzing[code] = true;
+      _aiErrors[code] = null;
+    });
+
+    try {
+      final Uint8List bytes;
+      if (kIsWeb) {
+        // On web, mediaList entries are already usable via Image.network in your UI;
+        // for analysis we still need bytes — this assumes XFile path works via network fetch.
+        // If this errors on web, the underlying picked file bytes should be cached instead.
+        bytes = await File(mediaList.last).readAsBytes();
+      } else {
+        bytes = await File(mediaList.last).readAsBytes();
+      }
+
+      final result = await _roadDefectDataSource.analyzeImage(bytes);
+
+      setState(() {
+        _aiResults[code] = result;
+        _aiAnalyzing[code] = false;
+        _contradictionAcknowledged.remove(code);
+      });
+    } catch (e) {
+      setState(() {
+        _aiErrors[code] = 'Analysis failed. Please retry.';
+        _aiAnalyzing[code] = false;
+      });
+    }
+  }
+
+  bool _hasContradiction(String code) {
+    final result = _aiResults[code];
+    final answer = _answers[code] ?? '';
+    if (result == null) return false;
+    return answer == 'YES' && result.hasDefects;
+  }
+
+  void _changeAnswerToNo(String code) {
+    setState(() {
+      _answers[code] = 'NO';
+      _contradictionAcknowledged.remove(code);
+    });
+  }
+
+  void _acknowledgeContradiction(String code) {
+    setState(() {
+      _contradictionAcknowledged.add(code);
+      _expandedNotes.add(code); // force note field open for mandatory justification
+    });
   }
 
   void _showMediaPopup(String code) {
@@ -919,6 +981,38 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                   ),
                 ),
               ),
+
+              // AI Analyze — only for AI-enabled questions, once a photo exists
+              if (question.aiAnalysisType != AiAnalysisType.none && mediaCount > 0) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: (_aiAnalyzing[code] ?? false) ? null : () => _analyzeForDefects(code),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        (_aiAnalyzing[code] ?? false)
+                            ? const SizedBox(
+                                width: 13,
+                                height: 13,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C3AED)),
+                              )
+                            : Icon(
+                                _aiResults.containsKey(code) ? Icons.auto_awesome : Icons.auto_awesome_outlined,
+                                size: 15,
+                                color: const Color(0xFF7C3AED),
+                              ),
+                        const SizedBox(width: 5),
+                        Text(
+                          (_aiAnalyzing[code] ?? false) ? 'Analyzing...' : (_aiResults.containsKey(code) ? 'Re-analyze' : 'Analyze'),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF7C3AED)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
 
@@ -971,6 +1065,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                       if ((_comments[code] ?? '').trim().isEmpty) {
                         _comments.remove(code);
                         _controller(code).clear();
+                        _contradictionAcknowledged.remove(code); // no justification saved — warning stays active
                       }
                     });
                   },
@@ -995,6 +1090,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                       if (text.isNotEmpty) {
                         _comments[code] = text;
                         _savedNotes.add(code);
+                        _contradictionAcknowledged.add(code); // justified — safe to suppress warning now
                       }
                       _expandedNotes.remove(code);
                     });
@@ -1070,7 +1166,14 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                       top: 3,
                       right: 3,
                       child: GestureDetector(
-                        onTap: () => setState(() => mediaList.removeAt(i)),
+                        onTap: () => setState(() {
+                          mediaList.removeAt(i);
+                          if (mediaList.isEmpty) {
+                            _aiResults.remove(code);
+                            _aiErrors.remove(code);
+                            _contradictionAcknowledged.remove(code);
+                          }
+                        }),
                         child: Container(
                           width: 20,
                           height: 20,
@@ -1089,11 +1192,192 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
             ),
           ],
 
+          // AI error
+          if (_aiErrors[code] != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(_aiErrors[code]!,
+                        style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
+                  ),
+                  TextButton(
+                    onPressed: () => _analyzeForDefects(code),
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+                    child: const Text('Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFEF4444))),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // AI result card
+          if (_aiResults.containsKey(code)) ...[
+            const SizedBox(height: 12),
+            _buildAiResultCard(code, mediaList),
+          ],
+
+          // Contradiction warning
+          if (_hasContradiction(code) && !_contradictionAcknowledged.contains(code)) ...[
+            const SizedBox(height: 12),
+            _buildContradictionBanner(code),
+          ],
+
           // Action summary card
           if (hasAction) ...[
             const SizedBox(height: 12),
             _buildActionSummaryCard(code, question),
           ],
+        ],
+      ),
+    );
+  }
+
+  // ─── AI result card ───────────────────────────────────────────────────────
+
+  Widget _buildAiResultCard(String code, List<String> mediaList) {
+    final result = _aiResults[code]!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF5FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome, size: 11, color: Colors.white),
+                    SizedBox(width: 4),
+                    Text('AI ANALYSIS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.4)),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Text(_formatDate(result.analyzedAt),
+                  style: TextStyle(fontSize: 11, color: AppColors.secondary.withValues(alpha: 0.6))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (result.allDetections.isNotEmpty && mediaList.isNotEmpty)
+            AnnotatedImage(
+              imageBytes: File(mediaList.last).readAsBytesSync(),
+              result: DroneAnalysisResult(
+                workersDetected: 0,
+                workersWithPpe: 0,
+                hazardTags: const [],
+                confidenceScore: 0,
+                analyzedAt: result.analyzedAt,
+                detections: result.allDetections,
+                imageWidth: 0,
+                imageHeight: 0,
+              ),
+              height: 160,
+            ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                result.hasDefects ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
+                size: 16,
+                color: result.hasDefects ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                result.summary,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: result.hasDefects ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Contradiction banner ─────────────────────────────────────────────────
+
+  Widget _buildContradictionBanner(String code) {
+    final result = _aiResults[code]!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'AI detected ${result.summary.toLowerCase()} — this conflicts with your "YES" answer.',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF92400E), height: 1.4),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _changeAnswerToNo(code),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFF59E0B)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Change to NO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E))),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _acknowledgeContradiction(code),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF59E0B),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Keep YES — Explain', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1227,8 +1511,10 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
           child: Padding(
             padding: EdgeInsets.only(right: option != 'NA' ? 8 : 0),
             child: GestureDetector(
-              onTap: () =>
-                  setState(() => _answers[code] = isSelected ? '' : option),
+              onTap: () => setState(() {
+                _answers[code] = isSelected ? '' : option;
+                _contradictionAcknowledged.remove(code);
+              }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 height: 44,

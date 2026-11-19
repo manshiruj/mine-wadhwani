@@ -1,16 +1,20 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:mine_wadhwani/data/models/health_assessment/risk_index_calculator.dart';
+import 'package:mine_wadhwani/presentation/screens/health_assessment/risk_index_card.dart';
 
 class RiskSummarySheet extends StatefulWidget {
   final int flagCount;
   final int totalChecks;
   final List<String> flagDetails;
+  final RiskIndexResult? riskIndex;
 
   const RiskSummarySheet({
     super.key,
     required this.flagCount,
     required this.totalChecks,
     required this.flagDetails,
+    this.riskIndex,
   });
 
   static Future<void> show(
@@ -18,6 +22,7 @@ class RiskSummarySheet extends StatefulWidget {
     required int flagCount,
     required int totalChecks,
     required List<String> flagDetails,
+    RiskIndexResult? riskIndex,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -27,6 +32,7 @@ class RiskSummarySheet extends StatefulWidget {
         flagCount: flagCount,
         totalChecks: totalChecks,
         flagDetails: flagDetails,
+        riskIndex: riskIndex,
       ),
     );
   }
@@ -44,18 +50,35 @@ class _RiskSummarySheetState extends State<RiskSummarySheet>
   late Animation<double> _gaugeAnimation;
 
   int get _score {
+    if (widget.riskIndex != null) {
+      // Invert: RiskIndexResult uses 100=safest, this gauge uses 100=riskiest.
+      return (100 - widget.riskIndex!.overallScore).clamp(0, 100).round();
+    }
     if (widget.totalChecks == 0) return 0;
     final ratio = widget.flagCount / widget.totalChecks;
     return (ratio * 100).clamp(0, 100).round();
   }
 
   String get _riskLabel {
+    if (widget.riskIndex != null) return widget.riskIndex!.band.label.split(' ').first;
     if (widget.flagCount == 0) return 'Low';
     if (widget.flagCount <= 2) return 'Medium';
     return 'High';
   }
 
   Color get _riskColor {
+    if (widget.riskIndex != null) {
+      switch (widget.riskIndex!.band) {
+        case RiskBand.low:
+          return const Color(0xFF10B981);
+        case RiskBand.moderate:
+          return const Color(0xFFF59E0B);
+        case RiskBand.high:
+          return const Color(0xFFEF4444);
+        case RiskBand.critical:
+          return const Color(0xFF991B1B);
+      }
+    }
     if (widget.flagCount == 0) return const Color(0xFF10B981);
     if (widget.flagCount <= 2) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);
@@ -127,6 +150,10 @@ class _RiskSummarySheetState extends State<RiskSummarySheet>
                 duration: const Duration(milliseconds: 400),
                 child: Column(
                   children: [
+                    if (widget.riskIndex != null && widget.riskIndex!.categories.isNotEmpty) ...[
+                      RiskIndexCard(result: widget.riskIndex!),
+                      const SizedBox(height: 16),
+                    ],
                     if (widget.flagDetails.isNotEmpty) _buildFlagDetails(),
                     const SizedBox(height: 20),
                   ],
