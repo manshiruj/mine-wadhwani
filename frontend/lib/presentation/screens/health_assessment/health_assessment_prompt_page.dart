@@ -1,3 +1,1272 @@
+// import 'package:mine_wadhwani/core/l10n/app_language.dart';
+// import 'package:mine_wadhwani/core/network/api_client.dart';
+// import 'package:mine_wadhwani/core/di/injection_container.dart';
+// import 'package:flutter/material.dart';
+// import 'package:mine_wadhwani/data/models/health_assessment/health_assessment_model.dart';
+// import 'package:mine_wadhwani/presentation/screens/health_assessment/risk_summary_sheet.dart';
+// import 'package:mine_wadhwani/data/datasources/health_assessment/aqm_datasource.dart';
+// import 'package:mine_wadhwani/data/models/aqm_reading.dart';
+// import 'dart:typed_data';
+// import 'package:image_picker/image_picker.dart';
+// import 'package:mine_wadhwani/data/models/drone_analysis_result.dart';
+// import 'package:mine_wadhwani/data/datasources/health_assessment/drone_analysis_datasource.dart';
+// import 'package:mine_wadhwani/presentation/screens/health_assessment/annotated_image.dart';
+// import 'package:mine_wadhwani/data/models/health_assessment/risk_index_calculator.dart';
+// import 'package:mine_wadhwani/data/models/health_assessment/critical_condition_checker.dart';
+// import 'package:mine_wadhwani/presentation/screens/health_assessment/critical_alert_screen.dart';
+// import 'package:mine_wadhwani/data/datasources/health_assessment/aqm_remote_datasource.dart';
+
+
+// class HealthAssessmentPromptPage extends StatefulWidget {
+//   final String mineName;
+//   final String area;
+//   final int shift;
+//   final String inspectionType;
+
+//   const HealthAssessmentPromptPage({
+//     super.key,
+//     required this.mineName,
+//     required this.area,
+//     required this.shift,
+//     required this.inspectionType,
+//   });
+
+//   @override
+//   State<HealthAssessmentPromptPage> createState() =>
+//       _HealthAssessmentPromptPageState();
+// }
+
+// class _HealthAssessmentPromptPageState
+//     extends State<HealthAssessmentPromptPage> {
+//   static const _headerColor = Color(0xFF1F579C);
+//   static const _flagColor = Color(0xFFEF4444);
+//   static const _flagBg = Color(0xFFFEF2F2);
+
+//   bool? _wantsAssessment;
+//   String? _selectedZone;
+//   bool _zoneWasAutoSelected = false;
+//   final Set<String> _selectedModes = {};
+
+// <<<<<<< HEAD
+//   final AqmDataSource _aqmDataSource = AqmRemoteDataSource();
+// =======
+//   final AqmDataSource _aqmDataSource = RemoteAqmDataSource();
+// >>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
+//   bool _isFetchingAqm = false;
+//   String? _aqmFetchError;
+//   AqmReading? _lastAqmReading;
+//   final List<String> _aqmAutoFields = [
+//     'PM2.5 (µg/m³)',
+//     'CO (ppm)',
+//     'CO2 (ppm)',
+//     'H2S (ppm)',
+//     'Methane (%)',
+//     'Temperature (°C)',
+//     'Humidity (%)',
+//     'Noise (dB)',
+//   ];
+//   final List<String> _aqmManualFields = [];
+
+//   final DroneAnalysisDataSource _droneDataSource = DroneRemoteAnalysisDataSource();
+//   final ImagePicker _imagePicker = ImagePicker();
+//   Uint8List? _droneImageBytes;
+//   bool _isAnalyzingDrone = false;
+//   String? _droneAnalysisError;
+//   DroneAnalysisResult? _lastDroneResult;
+
+
+//   final Map<String, TextEditingController> _aqmControllers = {};
+//   final Map<String, TextEditingController> _droneControllers = {};
+//   final TextEditingController _notesController = TextEditingController();
+
+//   // Each worker gets its own set of controllers, keyed by a unique id.
+//   final List<String> _workerIds = [];
+//   final Map<String, TextEditingController> _workerNameControllers = {};
+//   final Map<String, TextEditingController> _workerHrControllers = {};
+//   final Map<String, TextEditingController> _workerSpo2Controllers = {};
+//   int _workerCounter = 0;
+
+//   final List<String> _zones = [
+//     'Pit A',
+//     'Pit B',
+//     'Dump Yard',
+//     'Haul Road',
+//     'Stockpile Area',
+//     'Loading Point',
+//   ];
+
+//   List<String> get _aqmFields => [..._aqmAutoFields, ..._aqmManualFields];
+//   final List<String> _droneFields = ['PPE Compliance (%)', 'Hazard Tags'];
+
+//   final List<Map<String, dynamic>> _modes = [
+//     {'label': 'AQM Reading', 'value': 'AQM', 'icon': Icons.air_rounded},
+//     {'label': 'Drone Sweep', 'value': 'Drone', 'icon': Icons.flight_rounded},
+//     {'label': 'Smartwatch Spot-Check', 'value': 'Smartwatch', 'icon': Icons.watch_rounded},
+//   ];
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _autoSelectZone();
+//   }
+
+//   void _autoSelectZone() {
+//     if (widget.inspectionType == 'Stockpile inspection') {
+//       _selectedZone = 'Stockpile Area';
+//       _zoneWasAutoSelected = true;
+//     } else if (widget.inspectionType == 'Haul Road inspection') {
+//       _selectedZone = 'Haul Road';
+//       _zoneWasAutoSelected = true;
+//     }
+//   }
+
+//   @override
+//   void dispose() {
+//     _notesController.dispose();
+//     for (final c in _aqmControllers.values) c.dispose();
+//     for (final c in _droneControllers.values) c.dispose();
+//     for (final c in _workerNameControllers.values) c.dispose();
+//     for (final c in _workerHrControllers.values) c.dispose();
+//     for (final c in _workerSpo2Controllers.values) c.dispose();
+//     super.dispose();
+//   }
+
+//   TextEditingController _aqmController(String key) =>
+//       _aqmControllers.putIfAbsent(key, () => TextEditingController());
+
+//   TextEditingController _droneController(String key) =>
+//       _droneControllers.putIfAbsent(key, () => TextEditingController());
+
+//   void _addWorker() {
+//     final id = 'w${_workerCounter++}';
+//     setState(() {
+//       _workerIds.add(id);
+//       _workerNameControllers[id] = TextEditingController();
+//       _workerHrControllers[id] = TextEditingController();
+//       _workerSpo2Controllers[id] = TextEditingController();
+//     });
+//   }
+
+//   Future<void> _fetchAqmReading() async {
+//     setState(() {
+//       _isFetchingAqm = true;
+//       _aqmFetchError = null;
+//     });
+
+//     try {
+//       final reading = await _aqmDataSource.fetchLatestReading();
+//       setState(() {
+//         // Only overwrite fields the device actually reports; others stay manual.
+//         void fill(String key, num? v, int digits) {
+//           if (v != null) _aqmController(key).text = v.toStringAsFixed(digits);
+//         }
+//         fill('PM2.5 (µg/m³)', reading.pm25, 1);
+//         fill('CO (ppm)', reading.co, 2);
+//         fill('CO2 (ppm)', reading.co2, 0);
+//         fill('H2S (ppm)', reading.h2s, 3);
+//         fill('Methane (%)', reading.methane, 3);
+//         fill('Temperature (°C)', reading.temperature, 1);
+//         fill('Humidity (%)', reading.humidity, 0);
+//         fill('Noise (dB)', reading.noise, 0);
+//         _lastAqmReading = reading;
+//         _isFetchingAqm = false;
+//       });
+//       _checkForCriticalCondition();
+//     } on AqmFetchException catch (e) {
+//       setState(() {
+//         _aqmFetchError = e.message;
+//         _isFetchingAqm = false;
+//       });
+//     } catch (e) {
+//       setState(() {
+//         _aqmFetchError = 'Something went wrong. Please retry.';
+//         _isFetchingAqm = false;
+//       });
+//     }
+//   }
+
+//   String _formatTimeAgo(DateTime time) {
+//     final diff = DateTime.now().difference(time);
+//     if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
+//     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+//     return '${diff.inHours}h ago';
+//   }
+
+//     Future<void> _pickDroneImage() async {
+//     final picked = await _imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+//     if (picked == null) return;
+
+//     final bytes = await picked.readAsBytes();
+
+//     setState(() {
+//       _droneImageBytes = bytes;
+//       _droneAnalysisError = null;
+//     });
+
+//     await _analyzeDroneImage(bytes);
+//   }
+
+//   Future<void> _analyzeDroneImage(Uint8List imageBytes) async {
+//     setState(() {
+//       _isAnalyzingDrone = true;
+//       _droneAnalysisError = null;
+//     });
+
+//     try {
+//       final result = await _droneDataSource.analyzeImage(imageBytes);
+//       setState(() {
+//         _droneController('PPE Compliance (%)').text = result.ppeCompliancePercent.toStringAsFixed(0);
+//         _droneController('Hazard Tags').text = result.hazardTags.join(', ');
+//         _lastDroneResult = result;
+//         _isAnalyzingDrone = false;
+//       });
+//       _checkForCriticalCondition();
+//     } on DroneAnalysisException catch (e) {
+//       setState(() {
+//         _droneAnalysisError = e.message;
+//         _isAnalyzingDrone = false;
+//       });
+//     } catch (e) {
+//       setState(() {
+//         _droneAnalysisError = 'Analysis failed. Please retry.';
+//         _isAnalyzingDrone = false;
+//       });
+//     }
+//   }
+
+//   bool _isDroneFieldFlagged(String label, String value) {
+//     if (label == 'PPE Compliance (%)') {
+//       final v = double.tryParse(value);
+//       return v != null && v < HealthThresholds.minPpeCompliancePercent;
+//     }
+//     if (label == 'Hazard Tags') {
+//       return value.trim().isNotEmpty;
+//     }
+//     return false;
+//   }
+
+//   void _removeWorker(String id) {
+//     setState(() {
+//       _workerIds.remove(id);
+//       _workerNameControllers.remove(id)?.dispose();
+//       _workerHrControllers.remove(id)?.dispose();
+//       _workerSpo2Controllers.remove(id)?.dispose();
+//     });
+//   }
+
+//   bool get _canSubmit =>
+//       _selectedZone != null && _selectedModes.isNotEmpty && _hasAnyData;
+
+//   bool get _hasAnyData {
+//     for (final id in _workerIds) {
+//       if ((_workerNameControllers[id]?.text.trim() ?? '').isNotEmpty) return true;
+//       if ((_workerHrControllers[id]?.text.trim() ?? '').isNotEmpty) return true;
+//       if ((_workerSpo2Controllers[id]?.text.trim() ?? '').isNotEmpty) return true;
+//     }
+//     for (final field in _aqmFields) {
+//       if (_aqmController(field).text.trim().isNotEmpty) return true;
+//     }
+//     for (final field in _droneFields) {
+//       if (_droneController(field).text.trim().isNotEmpty) return true;
+//     }
+//     return false;
+//   }
+
+//   bool _isHrFlagged(String value) {
+//     final hr = double.tryParse(value);
+//     if (hr == null) return false;
+//     return hr < HealthThresholds.minHeartRate || hr > HealthThresholds.maxHeartRate;
+//   }
+
+//   bool _isSpo2Flagged(String value) {
+//     final s = double.tryParse(value);
+//     if (s == null) return false;
+//     return s < HealthThresholds.minSpo2;
+//   }
+
+//   bool _isAqmFieldFlagged(String label, String value) {
+//     final v = double.tryParse(value);
+//     if (v == null) return false;
+//     switch (label) {
+//       case 'PM2.5 (µg/m³)':
+//         return v > HealthThresholds.maxPm25;
+//       case 'CO (ppm)':
+//         return v > HealthThresholds.maxCo;
+//       case 'CO2 (ppm)':
+//         return v > HealthThresholds.maxCo2;
+//       case 'H2S (ppm)':
+//         return v > HealthThresholds.maxH2s;
+//       case 'Methane (%)':
+//         return v > HealthThresholds.maxMethane;
+//       case 'Temperature (°C)':
+//         return v > HealthThresholds.maxTemperature;
+//       case 'Noise (dB)':
+//         return v > HealthThresholds.maxNoise;
+//       default:
+//         return false; // Humidity has no standalone threshold — contextual only
+//     }
+//   }
+
+//   int get _liveFlagCount {
+//     int count = 0;
+//     if (_selectedModes.contains('Smartwatch')) {
+//       for (final id in _workerIds) {
+//         final hr = _workerHrControllers[id]?.text ?? '';
+//         final spo2 = _workerSpo2Controllers[id]?.text ?? '';
+//         if (_isHrFlagged(hr) || _isSpo2Flagged(spo2)) count++;
+//       }
+//     }
+//     if (_selectedModes.contains('AQM')) {
+//       for (final field in _aqmFields) {
+//         final value = _aqmController(field).text;
+//         if (_isAqmFieldFlagged(field, value)) count++;
+//       }
+//     }
+//     if (_selectedModes.contains('Drone')) {
+//       for (final field in _droneFields) {
+//         final value = _droneController(field).text;
+//         if (_isDroneFieldFlagged(field, value)) count++;
+//       }
+//     }
+//     return count;
+//   }
+
+//   void _skip() {
+//     Navigator.of(context).pop(HealthAssessmentModel.skipped());
+//   }
+
+//   void _submit() {
+//     if (!_canSubmit) return;
+//     final result = _buildResult();
+//     // AI Health Manager: stores the assessment; the server raises an alert when risk is High/Critical.
+//     _healthManager(result, persist: true).catchError((_) => <String, dynamic>{});
+//     Navigator.of(context).pop(result);
+//   }
+
+//   HealthAssessmentModel _buildResult() {
+//     final aqmReadings = <String, String>{};
+//     if (_selectedModes.contains('AQM')) {
+//       for (final field in _aqmFields) {
+//         final text = _aqmController(field).text.trim();
+//         if (text.isNotEmpty) aqmReadings[field] = text;
+//       }
+//     }
+
+//     final droneReadings = <String, String>{};
+//     if (_selectedModes.contains('Drone')) {
+//       for (final field in _droneFields) {
+//         final text = _droneController(field).text.trim();
+//         if (text.isNotEmpty) droneReadings[field] = text;
+//       }
+//     }
+
+//     final workerReadings = <WorkerReading>[];
+//     if (_selectedModes.contains('Smartwatch')) {
+//       for (final id in _workerIds) {
+//         final name = _workerNameControllers[id]?.text.trim() ?? '';
+//         final hr = _workerHrControllers[id]?.text.trim() ?? '';
+//         final spo2 = _workerSpo2Controllers[id]?.text.trim() ?? '';
+//         if (name.isNotEmpty || hr.isNotEmpty || spo2.isNotEmpty) {
+//           workerReadings.add(WorkerReading(name: name, heartRate: hr, spo2: spo2));
+//         }
+//       }
+//     }
+
+//     return HealthAssessmentModel(
+//       conducted: true,
+//       zone: _selectedZone!,
+//       modes: _selectedModes.toList(),
+//       aqmReadings: aqmReadings,
+//       droneReadings: droneReadings,
+//       droneImageBytes: _droneImageBytes,
+//       workerReadings: workerReadings,
+//       notes: _notesController.text.trim(),
+//       assessedAt: DateTime.now(),
+//     );
+//   }
+
+//   /// AI Health Manager agent (backend): risk score from AQM + PPE + smartwatch, plus suggestions.
+//   Future<Map<String, dynamic>> _healthManager(HealthAssessmentModel r, {bool persist = false}) async {
+//     final res = await sl<ApiClient>().post('/api/v1/health/assess', data: {
+//       'mine_name': widget.mineName,
+//       'area': widget.area,
+//       'zone': r.zone,
+//       'shift': widget.shift,
+//       'aqm': r.aqmReadings,
+//       'ppe': r.droneReadings,
+//       'workers': [
+//         for (final w in r.workerReadings) {'name': w.name, 'heartRate': w.heartRate, 'spo2': w.spo2}
+//       ],
+//       'persist': persist,
+//     });
+//     return ((res.data as Map)['data'] as Map).cast<String, dynamic>();
+//   }
+
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: const Color(0xFFF5F7FA),
+//       appBar: _buildAppBar(),
+//       body: SingleChildScrollView(
+//         padding: const EdgeInsets.all(20),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             if (_wantsAssessment == null) _buildYesNoCard(),
+//             if (_wantsAssessment == true) _buildAssessmentForm(),
+//           ],
+//         ),
+//       ),
+//       bottomNavigationBar: _wantsAssessment == true ? _buildSubmitBar() : null,
+//     );
+//   }
+
+//   AppBar _buildAppBar() {
+//     return AppBar(
+//       backgroundColor: _headerColor,
+//       foregroundColor: Colors.white,
+//       elevation: 0,
+//       automaticallyImplyLeading: false,
+//       title: Row(
+//         children: [
+//           Expanded(
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(tr('🩺 Worker Health & Safety Assessment'),
+//                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+//                 Text(tr('Optional — before checklist'),
+//                     style: TextStyle(fontSize: 11, color: Colors.white60)),
+//               ],
+//             ),
+//           ),
+//           if (_wantsAssessment == true && _liveFlagCount > 0) _buildFlagBadge(),
+//         ],
+//       ),
+//       actions: [
+//         TextButton(
+//           onPressed: _skip,
+//           child: Text(
+//             _wantsAssessment == null ? 'Skip' : 'Cancel',
+//             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+//           ),
+//         ),
+//         const SizedBox(width: 8),
+//       ],
+//     );
+//   }
+
+//   Widget _buildFlagBadge() {
+//     return Container(
+//       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(20),
+//       ),
+//       child: Row(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           const Icon(Icons.warning_amber_rounded, color: _flagColor, size: 15),
+//           const SizedBox(width: 5),
+//           Text('$_liveFlagCount',
+//               style: const TextStyle(color: _flagColor, fontSize: 13, fontWeight: FontWeight.w800)),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildYesNoCard() {
+//     return Container(
+//       width: double.infinity,
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(16),
+//         border: Border.all(color: const Color(0xFFE0E3EA)),
+//       ),
+//       clipBehavior: Clip.antiAlias,
+//       child: LayoutBuilder(
+//         builder: (context, constraints) {
+//           final isWide = constraints.maxWidth > 640;
+
+//           final imageWidget = ClipRRect(
+//             borderRadius: isWide
+//                 ? const BorderRadius.only(
+//                     topLeft: Radius.circular(16), bottomLeft: Radius.circular(16))
+//                 : const BorderRadius.only(
+//                     topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+//             child: Image.asset(
+//               'assets/images/worker_health_assessment.png',
+//               fit: BoxFit.cover,
+//               height: isWide ? null : 180,
+//               width: double.infinity,
+//               errorBuilder: (context, error, stackTrace) => Container(
+//                 height: isWide ? null : 180,
+//                 color: const Color(0xFFE4EBF2),
+//                 alignment: Alignment.center,
+//                 child: const Icon(Icons.image_outlined, color: _headerColor, size: 40),
+//               ),
+//             ),
+//           );
+
+//           final contentWidget = Padding(
+//             padding: const EdgeInsets.all(24),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               mainAxisSize: MainAxisSize.min,
+//               children: [
+//                 Container(
+//                   width: 52,
+//                   height: 52,
+//                   decoration: BoxDecoration(
+//                     color: const Color(0xFFE4EBF2),
+//                     borderRadius: BorderRadius.circular(14),
+//                   ),
+//                   child: const Icon(Icons.health_and_safety_rounded, color: _headerColor, size: 26),
+//                 ),
+//                 const SizedBox(height: 16),
+//                 Text(
+//                   tr('Do you want to conduct a health assessment for workers in this shift/zone?'),
+//                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E), height: 1.4),
+//                 ),
+//                 const SizedBox(height: 6),
+//                 Text(
+//                   tr('Uses AQM readings, drone sweep results, or smartwatch spot-checks. This step is optional and can be skipped.'),
+//                   style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.4),
+//                 ),
+//                 const SizedBox(height: 24),
+//                 Row(
+//                   children: [
+//                     Expanded(
+//                       child: OutlinedButton(
+//                         onPressed: _skip,
+//                         style: OutlinedButton.styleFrom(
+//                           padding: const EdgeInsets.symmetric(vertical: 14),
+//                           side: const BorderSide(color: Color(0xFFD5D8E0)),
+//                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//                         ),
+//                         child: Text(tr('No'), style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+//                       ),
+//                     ),
+//                     const SizedBox(width: 12),
+//                     Expanded(
+//                       child: ElevatedButton(
+//                         onPressed: () => setState(() => _wantsAssessment = true),
+//                         style: ElevatedButton.styleFrom(
+//                           backgroundColor: _headerColor,
+//                           foregroundColor: Colors.white,
+//                           padding: const EdgeInsets.symmetric(vertical: 14),
+//                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//                           elevation: 0,
+//                         ),
+//                         child: Text(tr('Yes'), style: TextStyle(fontWeight: FontWeight.bold)),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               ],
+//             ),
+//           );
+
+//           if (isWide) {
+//             return IntrinsicHeight(
+//               child: Row(
+//                 crossAxisAlignment: CrossAxisAlignment.stretch,
+//                 children: [
+//                   Expanded(flex: 5, child: imageWidget),
+//                   Expanded(flex: 6, child: contentWidget),
+//                 ],
+//               ),
+//             );
+//           } else {
+//             return Column(
+//               crossAxisAlignment: CrossAxisAlignment.stretch,
+//               children: [imageWidget, contentWidget],
+//             );
+//           }
+//         },
+//       ),
+//     );
+//   }
+
+//   Widget _buildAssessmentForm() {
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         _label('ZONE / AREA'),
+//         const SizedBox(height: 10),
+//         _buildZoneDropdown(),
+//         const SizedBox(height: 22),
+//         _label('ASSESSMENT MODE'),
+//         const SizedBox(height: 10),
+//         _buildModeChips(),
+//         const SizedBox(height: 22),
+//         if (_selectedModes.contains('AQM')) _buildAqmCard(),
+//         if (_selectedModes.contains('Drone')) _buildDroneCard(),
+//         if (_selectedModes.contains('Smartwatch')) _buildSmartwatchSection(),
+//         _label('NOTES (OPTIONAL)'),
+//         const SizedBox(height: 10),
+//         _buildNotesField(),
+//         const SizedBox(height: 90),
+//       ],
+//     );
+//   }
+
+//   Widget _buildFlagBanner() {
+//     return Container(
+//       width: double.infinity,
+//       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+//       decoration: BoxDecoration(
+//         color: _flagBg,
+//         borderRadius: BorderRadius.circular(10),
+//         border: Border.all(color: _flagColor.withValues(alpha: 0.3)),
+//       ),
+//       child: Row(
+//         children: [
+//           const Icon(Icons.warning_amber_rounded, color: _flagColor, size: 20),
+//           const SizedBox(width: 10),
+//           Expanded(
+//             child: Text(
+//               '$_liveFlagCount health flag${_liveFlagCount == 1 ? '' : 's'} raised — readings are outside safe range. You can still continue.',
+//               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _flagColor),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _label(String text) => Text(
+//         text,
+//         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _headerColor, letterSpacing: 0.5),
+//       );
+
+//   Widget _buildZoneDropdown() {
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Container(
+//           decoration: BoxDecoration(
+//             color: Colors.white,
+//             borderRadius: BorderRadius.circular(12),
+//             border: Border.all(
+//               color: _zoneWasAutoSelected ? _headerColor.withValues(alpha: 0.4) : const Color(0xFFE0E3EA),
+//             ),
+//           ),
+//           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+//           child: DropdownButtonHideUnderline(
+//             child: DropdownButton<String>(
+//               value: _selectedZone,
+//               hint: Text(tr('Select zone'), style: TextStyle(color: Colors.grey[400])),
+//               isExpanded: true,
+//               icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _headerColor),
+//               items: _zones.map((z) => DropdownMenuItem(value: z, child: Text(z))).toList(),
+//               onChanged: (val) => setState(() {
+//                 _selectedZone = val;
+//                 _zoneWasAutoSelected = false;
+//               }),
+//             ),
+//           ),
+//         ),
+//         if (_zoneWasAutoSelected) ...[
+//           const SizedBox(height: 6),
+//           Text(tr('Auto-selected based on inspection type — tap to change'),
+//               style: TextStyle(fontSize: 11, color: Colors.grey[500], fontStyle: FontStyle.italic)),
+//         ],
+//       ],
+//     );
+//   }
+
+//   Widget _buildModeChips() {
+//     return Wrap(
+//       spacing: 10,
+//       runSpacing: 10,
+//       children: _modes.map((mode) {
+//         final value = mode['value'] as String;
+//         final isSelected = _selectedModes.contains(value);
+//         return GestureDetector(
+//           onTap: () => setState(() {
+//             if (isSelected) {
+//               _selectedModes.remove(value);
+//             } else {
+//               _selectedModes.add(value);
+//               if (value == 'Smartwatch' && _workerIds.isEmpty) _addWorker();
+//             }
+//           }),
+//           child: AnimatedContainer(
+//             duration: const Duration(milliseconds: 150),
+//             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+//             decoration: BoxDecoration(
+//               color: isSelected ? _headerColor : Colors.white,
+//               borderRadius: BorderRadius.circular(10),
+//               border: Border.all(color: isSelected ? _headerColor : const Color(0xFFD5D8E0)),
+//             ),
+//             child: Row(
+//               mainAxisSize: MainAxisSize.min,
+//               children: [
+//                 Icon(mode['icon'] as IconData, size: 18, color: isSelected ? Colors.white : const Color(0xFF6B7280)),
+//                 const SizedBox(width: 8),
+//                 Text(tr(mode['label'] as String),
+//                     style: TextStyle(
+//                         fontWeight: FontWeight.w600,
+//                         color: isSelected ? Colors.white : const Color(0xFF1A1A2E))),
+//               ],
+//             ),
+//           ),
+//         );
+//       }).toList(),
+//     );
+//   }
+
+// Widget _buildAqmCard() {
+//     return Container(
+//       margin: const EdgeInsets.only(bottom: 16),
+//       padding: const EdgeInsets.all(16),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(14),
+//         border: Border.all(color: const Color(0xFFE0E3EA)),
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Row(
+//             children: [
+//               Icon(Icons.air_rounded, size: 16, color: _headerColor),
+//               SizedBox(width: 8),
+//               Text(tr('AQM Reading'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+//             ],
+//           ),
+//           const SizedBox(height: 12),
+
+//           SizedBox(
+//             width: double.infinity,
+//             child: OutlinedButton.icon(
+//               onPressed: _isFetchingAqm ? null : _fetchAqmReading,
+//               icon: _isFetchingAqm
+//                   ? const SizedBox(
+//                       width: 16,
+//                       height: 16,
+//                       child: CircularProgressIndicator(strokeWidth: 2, color: _headerColor),
+//                     )
+//                   : const Icon(Icons.sensors_rounded, size: 18, color: _headerColor),
+//               label: Text(
+//                 _isFetchingAqm
+//                     ? 'Fetching...'
+//                     : (_lastAqmReading == null ? 'Fetch AQM Reading' : 'Refresh AQM Reading'),
+//                 style: const TextStyle(color: _headerColor, fontWeight: FontWeight.w600),
+//               ),
+//               style: OutlinedButton.styleFrom(
+//                 side: const BorderSide(color: _headerColor),
+//                 padding: const EdgeInsets.symmetric(vertical: 12),
+//                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//               ),
+//             ),
+//           ),
+
+//           if (_lastAqmReading != null && !_isFetchingAqm) ...[
+//             const SizedBox(height: 6),
+//             Text(
+//               'Last fetched ${_formatTimeAgo(_lastAqmReading!.fetchedAt)}',
+//               style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+//             ),
+//           ],
+
+//           if (_aqmFetchError != null) ...[
+//             const SizedBox(height: 10),
+//             Container(
+//               width: double.infinity,
+//               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+//               decoration: BoxDecoration(
+//                 color: _flagBg,
+//                 borderRadius: BorderRadius.circular(8),
+//                 border: Border.all(color: _flagColor.withValues(alpha: 0.3)),
+//               ),
+//               child: Row(
+//                 children: [
+//                   const Icon(Icons.error_outline_rounded, color: _flagColor, size: 16),
+//                   const SizedBox(width: 8),
+//                   Expanded(
+//                     child: Text(_aqmFetchError!,
+//                         style: const TextStyle(fontSize: 12, color: _flagColor, fontWeight: FontWeight.w600)),
+//                   ),
+//                   TextButton(
+//                     onPressed: _fetchAqmReading,
+//                     style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+//                     child: Text(tr('Retry'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _flagColor)),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ],
+
+//           const SizedBox(height: 14),
+
+//           ..._aqmAutoFields.map((field) => _flaggableField(
+//                 controller: _aqmController(field),
+//                 label: field,
+//                 isFlagged: () => _isAqmFieldFlagged(field, _aqmController(field).text),
+//                 flagMessage: 'Above safe limit',
+//                 readOnly: true,
+//               )),
+//         ],
+//       ),
+//     );
+//   }
+
+//     Widget _buildDroneCard() {
+//     return Container(
+//       margin: const EdgeInsets.only(bottom: 16),
+//       padding: const EdgeInsets.all(16),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(14),
+//         border: Border.all(color: const Color(0xFFE0E3EA)),
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Row(
+//             children: [
+//               Icon(Icons.flight_rounded, size: 16, color: _headerColor),
+//               SizedBox(width: 8),
+//               Text(tr('Drone Sweep'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+//             ],
+//           ),
+//           const SizedBox(height: 12),
+
+//           if (_droneImageBytes != null) ...[
+//             _lastDroneResult != null
+//                 ? AnnotatedImage(imageBytes: _droneImageBytes!, result: _lastDroneResult!)
+//                 : ClipRRect(
+//                     borderRadius: BorderRadius.circular(10),
+//                     child: Image.memory(_droneImageBytes!, height: 160, width: double.infinity, fit: BoxFit.cover),
+//                   ),
+//             const SizedBox(height: 10),
+//           ],
+
+//           SizedBox(
+//             width: double.infinity,
+//             child: OutlinedButton.icon(
+//               onPressed: _isAnalyzingDrone ? null : _pickDroneImage,
+//               icon: _isAnalyzingDrone
+//                   ? const SizedBox(
+//                       width: 16,
+//                       height: 16,
+//                       child: CircularProgressIndicator(strokeWidth: 2, color: _headerColor),
+//                     )
+//                   : Icon(_droneImageBytes == null ? Icons.upload_rounded : Icons.refresh_rounded, size: 18, color: _headerColor),
+//               label: Text(
+//                 _isAnalyzingDrone
+//                     ? 'Analyzing...'
+//                     : (_droneImageBytes == null ? 'Attach Drone Photo' : 'Replace Photo'),
+//                 style: const TextStyle(color: _headerColor, fontWeight: FontWeight.w600),
+//               ),
+//               style: OutlinedButton.styleFrom(
+//                 side: const BorderSide(color: _headerColor),
+//                 padding: const EdgeInsets.symmetric(vertical: 12),
+//                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//               ),
+//             ),
+//           ),
+
+//           if (_lastDroneResult != null && !_isAnalyzingDrone) ...[
+//             const SizedBox(height: 6),
+//             Text(
+//               'Analyzed ${_formatTimeAgo(_lastDroneResult!.analyzedAt)} · Confidence ${(_lastDroneResult!.confidenceScore * 100).toStringAsFixed(0)}%',
+//               style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+//             ),
+//           ],
+
+//           if (_droneAnalysisError != null) ...[
+//             const SizedBox(height: 10),
+//             Container(
+//               width: double.infinity,
+//               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+//               decoration: BoxDecoration(
+//                 color: _flagBg,
+//                 borderRadius: BorderRadius.circular(8),
+//                 border: Border.all(color: _flagColor.withValues(alpha: 0.3)),
+//               ),
+//               child: Row(
+//                 children: [
+//                   const Icon(Icons.error_outline_rounded, color: _flagColor, size: 16),
+//                   const SizedBox(width: 8),
+//                   Expanded(
+//                     child: Text(_droneAnalysisError!,
+//                         style: const TextStyle(fontSize: 12, color: _flagColor, fontWeight: FontWeight.w600)),
+//                   ),
+//                   TextButton(
+//                     onPressed: () => _droneImageBytes != null ? _analyzeDroneImage(_droneImageBytes!) : null,
+//                     style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+//                     child: Text(tr('Retry'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _flagColor)),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ],
+
+//           if (_lastDroneResult != null) ...[
+//             const SizedBox(height: 14),
+//             ..._droneFields.map((field) => _flaggableField(
+//                   controller: _droneController(field),
+//                   label: field,
+//                   isFlagged: () => _isDroneFieldFlagged(field, _droneController(field).text),
+//                   flagMessage: field == 'PPE Compliance (%)' ? 'Below safe compliance level' : 'Hazard detected',
+//                   readOnly: true,
+//                 )),
+//           ],
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildSmartwatchSection() {
+//     return Container(
+//       margin: const EdgeInsets.only(bottom: 16),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Row(
+//             children: [
+//               Icon(Icons.watch_rounded, size: 16, color: _headerColor),
+//               SizedBox(width: 8),
+//               Text(tr('Smartwatch Spot-Check'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+//             ],
+//           ),
+//           const SizedBox(height: 12),
+//           ..._workerIds.asMap().entries.map((entry) {
+//             final index = entry.key;
+//             final id = entry.value;
+//             return _buildWorkerCard(id, index + 1);
+//           }),
+//           const SizedBox(height: 4),
+//           OutlinedButton.icon(
+//             onPressed: _addWorker,
+//             icon: const Icon(Icons.add_rounded, size: 18, color: _headerColor),
+//             label: Text(tr('Add Another Worker'), style: TextStyle(color: _headerColor, fontWeight: FontWeight.w600)),
+//             style: OutlinedButton.styleFrom(
+//               side: const BorderSide(color: _headerColor),
+//               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+//               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildWorkerCard(String id, int number) {
+//     return Container(
+//       margin: const EdgeInsets.only(bottom: 12),
+//       padding: const EdgeInsets.all(16),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(14),
+//         border: Border.all(color: const Color(0xFFE0E3EA)),
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Row(
+//             children: [
+//               Container(
+//                 width: 26,
+//                 height: 26,
+//                 decoration: BoxDecoration(color: _headerColor, borderRadius: BorderRadius.circular(8)),
+//                 alignment: Alignment.center,
+//                 child: Text('$number', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+//               ),
+//               const SizedBox(width: 8),
+//               Text('Worker $number', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+//               const Spacer(),
+//               if (_workerIds.length > 1)
+//                 GestureDetector(
+//                   onTap: () => _removeWorker(id),
+//                   child: const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFF9CA3AF)),
+//                 ),
+//             ],
+//           ),
+//           const SizedBox(height: 12),
+//           TextField(
+//             controller: _workerNameControllers[id],
+//             onChanged: (_) => setState(() {}),
+//             decoration: InputDecoration(
+//               labelText: tr('Worker Name'),
+//               isDense: true,
+//               filled: true,
+//               fillColor: const Color(0xFFF5F7FA),
+//               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+//               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+//             ),
+//           ),
+//           const SizedBox(height: 10),
+// <<<<<<< HEAD
+//           Focus(
+//             onFocusChange: (hasFocus) {
+//               if (!hasFocus) _checkForCriticalCondition();
+//             },
+//             child: _flaggableField(
+//               controller: _workerHrControllers[id]!,
+//               label: 'Heart Rate (bpm)',
+//               isFlagged: () => _isHrFlagged(_workerHrControllers[id]!.text),
+//               flagMessage: 'Outside safe range (${HealthThresholds.minHeartRate.toInt()}–${HealthThresholds.maxHeartRate.toInt()} bpm)',
+//             ),
+//           ),
+//           Focus(
+//             onFocusChange: (hasFocus) {
+//               if (!hasFocus) _checkForCriticalCondition();
+//             },
+//             child: _flaggableField(
+//               controller: _workerSpo2Controllers[id]!,
+//               label: 'SpO2 (%)',
+//               isFlagged: () => _isSpo2Flagged(_workerSpo2Controllers[id]!.text),
+//               flagMessage: 'Below safe oxygen level (< ${HealthThresholds.minSpo2.toInt()}%)',
+//             ),
+// =======
+//           _flaggableField(
+//             controller: _workerHrControllers[id]!,
+//             label: tr('Heart Rate (bpm)'),
+//             isFlagged: () => _isHrFlagged(_workerHrControllers[id]!.text),
+//             flagMessage: 'Outside safe range (${HealthThresholds.minHeartRate.toInt()}–${HealthThresholds.maxHeartRate.toInt()} bpm)',
+//           ),
+//           _flaggableField(
+//             controller: _workerSpo2Controllers[id]!,
+//             label: tr('SpO2 (%)'),
+//             isFlagged: () => _isSpo2Flagged(_workerSpo2Controllers[id]!.text),
+//             flagMessage: 'Below safe oxygen level (< ${HealthThresholds.minSpo2.toInt()}%)',
+// >>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+// Widget _flaggableField({
+//     required TextEditingController controller,
+//     required String label,
+//     required bool Function() isFlagged,
+//     required String flagMessage,
+//     bool readOnly = false,
+//   }) {
+//     final flagged = isFlagged();
+//     return Padding(
+//       padding: const EdgeInsets.only(bottom: 10),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           TextField(
+//             controller: controller,
+//             readOnly: readOnly,
+//             keyboardType: TextInputType.number,
+//             onChanged: readOnly ? null : (_) => setState(() {}),
+//             decoration: InputDecoration(
+//               labelText: label,
+//               isDense: true,
+//               filled: true,
+//               fillColor: flagged
+//                   ? _flagBg
+//                   : (readOnly ? const Color(0xFFEFF4FA) : const Color(0xFFF5F7FA)),
+//               suffixIcon: flagged
+//                   ? const Icon(Icons.warning_amber_rounded, color: _flagColor, size: 20)
+//                   : (readOnly ? const Icon(Icons.sensors_rounded, color: _headerColor, size: 18) : null),
+//               border: OutlineInputBorder(
+//                 borderRadius: BorderRadius.circular(10),
+//                 borderSide: flagged ? const BorderSide(color: _flagColor, width: 1.4) : BorderSide.none,
+//               ),
+//               enabledBorder: OutlineInputBorder(
+//                 borderRadius: BorderRadius.circular(10),
+//                 borderSide: flagged ? const BorderSide(color: _flagColor, width: 1.4) : BorderSide.none,
+//               ),
+//               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+//             ),
+//           ),
+//           if (flagged) ...[
+//             const SizedBox(height: 4),
+//             Padding(
+//               padding: const EdgeInsets.only(left: 4),
+//               child: Text('⚠️ $flagMessage', style: const TextStyle(fontSize: 11, color: _flagColor, fontWeight: FontWeight.w600)),
+//             ),
+//           ],
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildNotesField() {
+//     return Container(
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(12),
+//         border: Border.all(color: const Color(0xFFE0E3EA)),
+//       ),
+//       child: TextField(
+//         controller: _notesController,
+//         maxLines: 3,
+//         decoration: InputDecoration(
+//           hintText: tr('Any additional observations...'),
+//           border: InputBorder.none,
+//           contentPadding: EdgeInsets.all(14),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildSubmitBar() {
+//     return Container(
+//       color: Colors.white,
+//       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+//       child: SafeArea(
+//         top: false,
+//         child: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           children: [
+//             if (_liveFlagCount > 0) ...[
+//               Container(
+//                 width: double.infinity,
+//                 margin: const EdgeInsets.only(bottom: 10),
+//                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+//                 decoration: BoxDecoration(
+//                   color: _flagBg,
+//                   borderRadius: BorderRadius.circular(10),
+//                   border: Border.all(color: _flagColor.withValues(alpha: 0.3)),
+//                 ),
+//                 child: Row(
+//                   children: [
+//                     const Icon(Icons.warning_amber_rounded, color: _flagColor, size: 18),
+//                     const SizedBox(width: 8),
+//                     Expanded(
+//                       child: Text(
+//                         '$_liveFlagCount reading${_liveFlagCount == 1 ? '' : 's'} flagged outside safe range',
+//                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _flagColor),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//             ],
+//             Row(
+//               children: [
+//                 Expanded(
+//                   child: SizedBox(
+//                     height: 52,
+//                     child: OutlinedButton(
+//                       onPressed: _canSubmit ? _showRiskSummary : null,
+//                       style: OutlinedButton.styleFrom(
+//                         side: BorderSide(color: _canSubmit ? _headerColor : const Color(0xFFD5D8E0)),
+//                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//                       ),
+//                       child: Text(tr('View Risk Summary'),
+//                           style: TextStyle(
+//                               fontWeight: FontWeight.bold,
+//                               color: _canSubmit ? _headerColor : const Color(0xFFBDBDBD))),
+//                     ),
+//                   ),
+//                 ),
+//                 const SizedBox(width: 12),
+//                 Expanded(
+//                   child: SizedBox(
+//                     height: 52,
+//                     child: ElevatedButton(
+//                       onPressed: _canSubmit ? _submit : null,
+//             style: ElevatedButton.styleFrom(
+//               backgroundColor: _headerColor,
+//               disabledBackgroundColor: Colors.grey.shade300,
+//               foregroundColor: Colors.white,
+//               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//               elevation: 0,
+//             ),
+//             child: Text(tr('Continue'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+//                     ),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+
+//   HealthAssessmentModel _buildSnapshotModel() {
+//     final aqmSnapshot = <String, String>{};
+//     for (final field in _aqmFields) {
+//       final text = _aqmController(field).text.trim();
+//       if (text.isNotEmpty) aqmSnapshot[field] = text;
+//     }
+//     final droneSnapshot = <String, String>{};
+//     for (final field in _droneFields) {
+//       final text = _droneController(field).text.trim();
+//       if (text.isNotEmpty) droneSnapshot[field] = text;
+//     }
+//     final workerSnapshot = <WorkerReading>[];
+//     for (final id in _workerIds) {
+//       final name = _workerNameControllers[id]?.text.trim() ?? '';
+//       final hr = _workerHrControllers[id]?.text.trim() ?? '';
+//       final spo2 = _workerSpo2Controllers[id]?.text.trim() ?? '';
+//       if (name.isNotEmpty || hr.isNotEmpty || spo2.isNotEmpty) {
+//         workerSnapshot.add(WorkerReading(name: name, heartRate: hr, spo2: spo2));
+//       }
+//     }
+
+//     return HealthAssessmentModel(
+//       conducted: true,
+//       zone: _selectedZone ?? '',
+//       modes: _selectedModes.toList(),
+//       aqmReadings: aqmSnapshot,
+//       droneReadings: droneSnapshot,
+//       workerReadings: workerSnapshot,
+//       notes: '',
+//       assessedAt: DateTime.now(),
+//     );
+//   }
+
+//   void _checkForCriticalCondition() {
+//     final snapshot = _buildSnapshotModel();
+//     final alert = CriticalConditionChecker.check(snapshot);
+//     if (alert != null && mounted) {
+//       Navigator.of(context).push(
+//         MaterialPageRoute(
+//           builder: (_) => CriticalAlertScreen(alert: alert),
+//           fullscreenDialog: true,
+//         ),
+//       );
+//     }
+//   }
+
+//   void _showRiskSummary() {
+//     final details = <String>[];
+//     for (final id in _workerIds) {
+//       final name = _workerNameControllers[id]?.text.trim() ?? 'Worker';
+//       final hr = _workerHrControllers[id]?.text ?? '';
+//       final spo2 = _workerSpo2Controllers[id]?.text ?? '';
+//       if (_isHrFlagged(hr)) details.add('$name — Heart rate outside safe range');
+//       if (_isSpo2Flagged(spo2)) details.add('$name — Low SpO2');
+//     }
+//     if (_selectedModes.contains('AQM')) {
+//       for (final field in _aqmFields) {
+//         final value = _aqmController(field).text;
+//         if (_isAqmFieldFlagged(field, value)) details.add('AQM — $field outside safe limit');
+//       }
+//     }
+
+//     final totalChecks = _workerIds.length * 2 + _aqmFields.length;
+//     final riskIndex = RiskIndexCalculator.calculate(_buildSnapshotModel());
+
+//     RiskSummarySheet.show(
+//       context,
+//       flagCount: _liveFlagCount,
+//       totalChecks: totalChecks,
+//       flagDetails: details,
+// <<<<<<< HEAD
+//       riskIndex: riskIndex,
+// =======
+//       aiAssessment: _healthManager(_buildResult()),
+// >>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
+//     );
+//   }
+// }
+
 import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'package:mine_wadhwani/core/network/api_client.dart';
 import 'package:mine_wadhwani/core/di/injection_container.dart';
@@ -47,11 +1316,7 @@ class _HealthAssessmentPromptPageState
   bool _zoneWasAutoSelected = false;
   final Set<String> _selectedModes = {};
 
-<<<<<<< HEAD
   final AqmDataSource _aqmDataSource = AqmRemoteDataSource();
-=======
-  final AqmDataSource _aqmDataSource = RemoteAqmDataSource();
->>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
   bool _isFetchingAqm = false;
   String? _aqmFetchError;
   AqmReading? _lastAqmReading;
@@ -192,7 +1457,7 @@ class _HealthAssessmentPromptPageState
     return '${diff.inHours}h ago';
   }
 
-    Future<void> _pickDroneImage() async {
+  Future<void> _pickDroneImage() async {
     final picked = await _imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (picked == null) return;
 
@@ -718,7 +1983,7 @@ class _HealthAssessmentPromptPageState
     );
   }
 
-Widget _buildAqmCard() {
+  Widget _buildAqmCard() {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -814,7 +2079,7 @@ Widget _buildAqmCard() {
     );
   }
 
-    Widget _buildDroneCard() {
+  Widget _buildDroneCard() {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -1001,14 +2266,13 @@ Widget _buildAqmCard() {
             ),
           ),
           const SizedBox(height: 10),
-<<<<<<< HEAD
           Focus(
             onFocusChange: (hasFocus) {
               if (!hasFocus) _checkForCriticalCondition();
             },
             child: _flaggableField(
               controller: _workerHrControllers[id]!,
-              label: 'Heart Rate (bpm)',
+              label: tr('Heart Rate (bpm)'),
               isFlagged: () => _isHrFlagged(_workerHrControllers[id]!.text),
               flagMessage: 'Outside safe range (${HealthThresholds.minHeartRate.toInt()}–${HealthThresholds.maxHeartRate.toInt()} bpm)',
             ),
@@ -1019,30 +2283,17 @@ Widget _buildAqmCard() {
             },
             child: _flaggableField(
               controller: _workerSpo2Controllers[id]!,
-              label: 'SpO2 (%)',
+              label: tr('SpO2 (%)'),
               isFlagged: () => _isSpo2Flagged(_workerSpo2Controllers[id]!.text),
               flagMessage: 'Below safe oxygen level (< ${HealthThresholds.minSpo2.toInt()}%)',
             ),
-=======
-          _flaggableField(
-            controller: _workerHrControllers[id]!,
-            label: tr('Heart Rate (bpm)'),
-            isFlagged: () => _isHrFlagged(_workerHrControllers[id]!.text),
-            flagMessage: 'Outside safe range (${HealthThresholds.minHeartRate.toInt()}–${HealthThresholds.maxHeartRate.toInt()} bpm)',
-          ),
-          _flaggableField(
-            controller: _workerSpo2Controllers[id]!,
-            label: tr('SpO2 (%)'),
-            isFlagged: () => _isSpo2Flagged(_workerSpo2Controllers[id]!.text),
-            flagMessage: 'Below safe oxygen level (< ${HealthThresholds.minSpo2.toInt()}%)',
->>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
           ),
         ],
       ),
     );
   }
 
-Widget _flaggableField({
+  Widget _flaggableField({
     required TextEditingController controller,
     required String label,
     required bool Function() isFlagged,
@@ -1169,14 +2420,14 @@ Widget _flaggableField({
                     height: 52,
                     child: ElevatedButton(
                       onPressed: _canSubmit ? _submit : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _headerColor,
-              disabledBackgroundColor: Colors.grey.shade300,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: Text(tr('Continue'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _headerColor,
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      child: Text(tr('Continue'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ),
@@ -1258,11 +2509,8 @@ Widget _flaggableField({
       flagCount: _liveFlagCount,
       totalChecks: totalChecks,
       flagDetails: details,
-<<<<<<< HEAD
       riskIndex: riskIndex,
-=======
       aiAssessment: _healthManager(_buildResult()),
->>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
     );
   }
 }
