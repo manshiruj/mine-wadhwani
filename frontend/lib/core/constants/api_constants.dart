@@ -11,8 +11,6 @@ class ApiConstants {
       _envBaseUrl == 'origin' ? Uri.base.origin : _envBaseUrl;
   static const Duration connectTimeout = Duration(seconds: 90);
   static const Duration receiveTimeout = Duration(seconds: 90);
-<<<<<<< HEAD
-
   static const String roboflowWorkflowUrl =
     'https://serverless.roboflow.com/infer/workflows/manshi-ruj/ppe-detection-nzzmi';
   static const String roboflowApiKey = '59uEY5fpNgojG3mBjNEa';
@@ -30,8 +28,6 @@ class ApiConstants {
   static const String aqiEmail = 'sagarwal@iitism.ac.in';
   static const String aqiPassword = '1234567';
   static const String aqmDeviceSerial = '84530304bcb6c';
-=======
->>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
 }
 
 //'https://mine-wadhwani-4.onrender.com';
