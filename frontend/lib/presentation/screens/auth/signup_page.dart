@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // import 'package:auto_route/auto_route.dart';
 // import 'package:flutter/material.dart';
 // import 'package:flutter_bloc/flutter_bloc.dart';
@@ -374,7 +375,7 @@ class _SignupPageState extends State<SignupPage> {
       if (_selectedRole == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Please select a role'),
+            content: Text(tr('Please select a role')),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -469,8 +470,8 @@ class _SignupPageState extends State<SignupPage> {
                         ],
                       ),
                       const Spacer(),
-                      const Text(
-                        'Join the Future\nof Mine Safety.',
+                      Text(
+                        tr('Join the Future\nof Mine Safety.'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 36,
@@ -479,8 +480,8 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Create your account and start monitoring\nyour mine sites with AI-powered insights.',
+                      Text(
+                        tr('Create your account and start monitoring\nyour mine sites with AI-powered insights.'),
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 15,
@@ -561,8 +562,8 @@ class _SignupPageState extends State<SignupPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Join the Future\nof Mine Safety.',
+                Text(
+                  tr('Join the Future\nof Mine Safety.'),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -588,8 +589,8 @@ class _SignupPageState extends State<SignupPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Create Account',
+          Text(
+            tr('Create Account'),
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w800,
@@ -597,8 +598,8 @@ class _SignupPageState extends State<SignupPage> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Fill in your details to get started',
+          Text(
+            tr('Fill in your details to get started'),
             style: TextStyle(fontSize: 14, color: Color(0xFF6B7A99)),
           ),
           const SizedBox(height: 32),
@@ -666,9 +667,10 @@ class _SignupPageState extends State<SignupPage> {
           _buildLabel('Role'),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _selectedRole,
             decoration: InputDecoration(
-              hintText: 'Select your role',
+              hintText: tr('Select your role'),
               hintStyle:
                   const TextStyle(color: Color(0xFFB0BAD0), fontSize: 14),
               prefixIcon: const Icon(
@@ -810,8 +812,8 @@ class _SignupPageState extends State<SignupPage> {
                         strokeWidth: 2,
                       ),
                     )
-                  : const Text(
-                      'Create Account',
+                  : Text(
+                      tr('Create Account'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -829,7 +831,7 @@ class _SignupPageState extends State<SignupPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  'or',
+                  tr('or'),
                   style: TextStyle(color: Colors.grey[400], fontSize: 13),
                 ),
               ),
@@ -851,8 +853,8 @@ class _SignupPageState extends State<SignupPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
-                'Back to Sign In',
+              child: Text(
+                tr('Back to Sign In'),
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
             ),
@@ -861,7 +863,7 @@ class _SignupPageState extends State<SignupPage> {
 
           Center(
             child: Text(
-              '© 2026 AIMSURE. All rights reserved.',
+              tr('© 2026 AIMSURE. All rights reserved.'),
               style: TextStyle(fontSize: 11, color: Colors.grey[400]),
             ),
           ),

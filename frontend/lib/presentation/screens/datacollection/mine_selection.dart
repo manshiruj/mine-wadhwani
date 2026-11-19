@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:mine_wadhwani/core/routing/app_router.gr.dart';
@@ -115,12 +116,12 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
                 children: [
                   _buildSectionHeader(
                     icon: Icons.location_on_rounded,
-                    title: 'Mine Details',
-                    subtitle: 'Select the mine and inspection area',
+                    title: tr('Mine Details'),
+                    subtitle: tr('Select the mine and inspection area'),
                   ),
                   const SizedBox(height: 24),
                   _buildDropdownCard(
-                    label: 'Company Name',
+                    label: tr('Company Name'),
                     hint: 'Select company',
                     icon: Icons.domain_rounded,
                     value: _selectedCompany,
@@ -129,7 +130,7 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
                   ),
                   const SizedBox(height: 16),
                   _buildDropdownCard(
-                    label: 'Subsidiaries',
+                    label: tr('Subsidiaries'),
                     hint: 'Select subsidiaries',
                     icon: Icons.business_rounded,
                     value: _selectedMine,
@@ -138,7 +139,7 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
                   ),
                   const SizedBox(height: 16),
                   _buildDropdownCard(
-                    label: 'Mine Type',
+                    label: tr('Mine Type'),
                     hint: 'Select mine type',
                     icon: Icons.category_rounded,
                     value: _selectedMineType,
@@ -148,7 +149,7 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
                   ),
                   const SizedBox(height: 16),
                   _buildDropdownCard(
-                    label: 'Mine Name',
+                    label: tr('Mine Name'),
                     hint: 'Select mine name',
                     icon: Icons.map_rounded,
                     value: _selectedArea,
@@ -181,11 +182,11 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
                         ),
                         elevation: 0,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Next',
+                            tr('Next'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -215,11 +216,11 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
         icon: const Icon(Icons.arrow_back_ios_rounded),
         onPressed: () => context.router.maybePop(),
       ),
-      title: const Column(
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Start Inspection',
+            tr('Start Inspection'),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -227,7 +228,7 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
             ),
           ),
           Text(
-            'Step 1 of 2',
+            tr('Step 1 of 2'),
             style: TextStyle(fontSize: 11, color: Colors.white60),
           ),
         ],
@@ -274,7 +275,7 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
           child: Icon(icon, color: navyBlue, size: 22),
         ),
         const SizedBox(width: 12),
-        Column(
+        Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -290,7 +291,7 @@ class _MineSelectionPageState extends State<MineSelectionPage> {
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
-        ),
+        )),
       ],
     );
   }

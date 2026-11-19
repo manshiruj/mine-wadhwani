@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -50,11 +51,11 @@ class MineInfoPage extends StatelessWidget {
           icon: const Icon(Icons.close_rounded),
           onPressed: () => Navigator.of(context).pop(false),
         ),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Mine Info',
+              tr('Mine Info'),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -62,7 +63,7 @@ class MineInfoPage extends StatelessWidget {
               ),
             ),
             Text(
-              'Review before inspection',
+              tr('Review before inspection'),
               style: TextStyle(fontSize: 11, color: Colors.white60),
             ),
           ],
@@ -128,7 +129,7 @@ class MineInfoPage extends StatelessWidget {
                     severityColor: Colors.red[700]!,
                     severityBg: const Color(0xFFFCEBEB),
                     description:
-                        'Conveyor belt guard missing at Bench 3',
+                        tr('Conveyor belt guard missing at Bench 3'),
                     daysOpen: 12,
                   ),
                   const SizedBox(height: 8),
@@ -137,7 +138,7 @@ class MineInfoPage extends StatelessWidget {
                     severityColor: const Color(0xFF854F0B),
                     severityBg: const Color(0xFFFAEEDA),
                     description:
-                        'Dust suppression system partially offline near loading bay',
+                        tr('Dust suppression system partially offline near loading bay'),
                     daysOpen: 7,
                   ),
                   const SizedBox(height: 8),
@@ -146,7 +147,7 @@ class MineInfoPage extends StatelessWidget {
                     severityColor: const Color(0xFF3B6D11),
                     severityBg: const Color(0xFFEAF3DE),
                     description:
-                        'Emergency signage update pending at entry gate',
+                        tr('Emergency signage update pending at entry gate'),
                     daysOpen: 3,
                   ),
                   const SizedBox(height: 20),
@@ -257,8 +258,8 @@ class MineInfoPage extends StatelessWidget {
               border: Border.all(
                   color: greenAccent.withValues(alpha: 0.5), width: 1),
             ),
-            child: const Text(
-              'Active',
+            child: Text(
+              tr('Active'),
               style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -317,14 +318,14 @@ class MineInfoPage extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ),
-          Text(
+          Flexible(child: Text(
             value,
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: Color(0xFF1A1A2E),
             ),
-          ),
+          )),
         ],
       ),
     );
@@ -486,8 +487,8 @@ class MineInfoPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Full mine details on official website',
+                  Text(
+                    tr('Full mine details on official website'),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -528,8 +529,8 @@ class MineInfoPage extends StatelessWidget {
         child: ElevatedButton.icon(
           onPressed: () => Navigator.of(context).pop(true),
           icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
-          label: const Text(
-            'I have reviewed — proceed',
+          label: Text(
+            tr('I have reviewed — proceed'),
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           style: ElevatedButton.styleFrom(

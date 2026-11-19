@@ -1,7 +1,15 @@
+<<<<<<< HEAD
   // lib/presentation/screens/common/inspection_report_preview_page.dart
   //
   // Generic PDF preview & export page used by ALL inspection types.
   // Replaces StockpileReportPreviewPage. Works with any List<InspectionSection>.
+=======
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
+// lib/presentation/screens/common/inspection_report_preview_page.dart
+//
+// Generic PDF preview & export page used by ALL inspection types.
+// Replaces StockpileReportPreviewPage. Works with any List<InspectionSection>.
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
 
   import 'dart:io';
   import 'dart:typed_data';
@@ -58,9 +66,30 @@
       this.healthAssessment,
     });
 
+<<<<<<< HEAD
     @override
     State<InspectionReportPreviewPage> createState() =>
         _InspectionReportPreviewPageState();
+=======
+  @override
+  State<InspectionReportPreviewPage> createState() =>
+      _InspectionReportPreviewPageState();
+}
+
+class _InspectionReportPreviewPageState
+    extends State<InspectionReportPreviewPage> {
+  static const _headerColor = Color(0xFF1F579C);
+  bool _isGenerating = false;
+
+  @override
+  void initState() {
+    super.initState();
+        SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: _headerColor,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
   }
 
   class _InspectionReportPreviewPageState
@@ -1205,6 +1234,7 @@
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+<<<<<<< HEAD
                         Text('Report Preview',
                             style: AppTextStyles.headlineMedium.copyWith(
                               color: Colors.white,
@@ -1217,6 +1247,131 @@
                               color: Colors.white.withValues(alpha: 0.75),
                               fontSize: 13,
                             )),
+=======
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.asset('assets/images/app_icon.png',
+                                    width: 56, height: 56, fit: BoxFit.cover),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(widget.inspectionType,
+                                        style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF1A2340))),
+                                    const SizedBox(height: 3),
+                                    Text(tr('Inspection Report'),
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.secondary
+                                                .withValues(alpha: 0.6))),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD1FAE5),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(tr('Complete'),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF065F46))),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(color: Color(0xFFE0E3EA), height: 1),
+                        IntrinsicHeight(
+                          child: Row(
+                            children: [
+                              _scoreCell('Score',
+                                  '$_totalAnswered / $_totalQuestions ($scorePercent%)',
+                                  flex: 3),
+                              const VerticalDivider(
+                                  color: Color(0xFFE0E3EA), width: 1),
+                              _scoreCell('Flagged items', '$_flaggedCount',
+                                  flex: 2,
+                                  valueColor: _flaggedCount > 0
+                                      ? const Color(0xFFEF4444)
+                                      : null),
+                              const VerticalDivider(
+                                  color: Color(0xFFE0E3EA), width: 1),
+                              _scoreCell('Actions', '$_actionsCount',
+                                  flex: 2,
+                                  valueColor: _actionsCount > 0
+                                      ? const Color(0xFFF59E0B)
+                                      : null),
+                            ],
+                          ),
+                        ),
+                        const Divider(color: Color(0xFFE0E3EA), height: 1),
+                        IntrinsicHeight(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(tr('Conducted on'),
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.secondary
+                                                  .withValues(alpha: 0.6))),
+                                      const SizedBox(height: 3),
+                                      Text(_formatDate(widget.reviewedAt),
+                                          style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF1A2340))),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const VerticalDivider(
+                                  color: Color(0xFFE0E3EA), width: 1),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(tr('Evaluator'),
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.secondary
+                                                  .withValues(alpha: 0.6))),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                          '${widget.inspectorName} (${widget.inspectorRole})',
+                                          style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF1A2340))),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
                       ],
                     ),
                   ),
@@ -1229,6 +1384,11 @@
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       ),
+<<<<<<< HEAD
+=======
+                      child: Text(tr('Not conducted this shift'),
+                          style: TextStyle(fontSize: 13, color: AppColors.secondary.withValues(alpha: 0.6))),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
                     ),
                 ],
               ),
@@ -1238,6 +1398,7 @@
       );
     }
 
+<<<<<<< HEAD
     Widget _scoreCell(String label, String value,
         {int flex = 1, Color? valueColor}) {
       return Expanded(
@@ -1258,6 +1419,64 @@
                       fontWeight: FontWeight.w800,
                       color: valueColor ?? const Color(0xFF1A2340))),
             ],
+=======
+  Widget _buildHeader(double statusBarHeight) {
+    return Container(
+      color: _headerColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(height: statusBarHeight),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(Icons.arrow_back,
+                        color: Colors.white, size: 20),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(tr('Report Preview'),
+                          style: AppTextStyles.headlineMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 22,
+                          )),
+                      const SizedBox(height: 2),
+                      Text(tr('Read-only — download or share below'),
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 13,
+                          )),
+                    ],
+                  ),
+                ),
+                if (_isGenerating)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
           ),
         ),
       );
@@ -1356,9 +1575,24 @@
               const SizedBox(height: 6),
               ...ha.aqmReadings.entries.map((e) => _healthRow(e.key, e.value, ha.aqmFlagged)),
             ],
+<<<<<<< HEAD
                       if (ha.droneReadings.isNotEmpty) ...[
+=======
+          ),
+          const SizedBox(height: 4),
+          Text('Modes: ${ha.modes.join(', ')}',
+              style: TextStyle(fontSize: 12, color: AppColors.secondary.withValues(alpha: 0.6))),
+          if (ha.aqmReadings.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Text('DRONE SWEEP',
+            Text(tr('AQM READING'),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F579C), letterSpacing: 0.5)),
+            const SizedBox(height: 6),
+            ...ha.aqmReadings.entries.map((e) => _healthRow(e.key, e.value, ha.aqmFlagged)),
+          ],
+          if (ha.droneReadings.isNotEmpty) ...[
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
+            const SizedBox(height: 14),
+            Text(tr('DRONE SWEEP'),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F579C), letterSpacing: 0.5)),
             const SizedBox(height: 6),
             if (ha.droneImageBytes != null) ...[
@@ -1375,6 +1609,7 @@
             ],
             ...ha.droneReadings.entries.map((e) => _healthRow(e.key, e.value, false)),
           ],
+<<<<<<< HEAD
             if (ha.workerReadings.isNotEmpty) ...[
               const SizedBox(height: 14),
               const Text('SMARTWATCH SPOT-CHECK',
@@ -1398,6 +1633,20 @@
                           _healthRow('SpO2', '${w.spo2} %', w.spo2Flagged, compact: true),
                         ],
                       ),
+=======
+          if (ha.workerReadings.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(tr('SMARTWATCH SPOT-CHECK'),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F579C), letterSpacing: 0.5)),
+            const SizedBox(height: 6),
+            ...ha.workerReadings.map((w) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: w.isFlagged ? const Color(0xFFFEF2F2) : const Color(0xFFF5F7FA),
+                      borderRadius: BorderRadius.circular(8),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
                     ),
                   )),
             ],
@@ -1503,9 +1752,22 @@
                         ),
                       ],
                     ),
+<<<<<<< HEAD
                   )),
             ];
           }),
+=======
+                  ),
+                )),
+          ],
+          if (ha.notes.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(tr('NOTES'),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F579C), letterSpacing: 0.5)),
+            const SizedBox(height: 6),
+            Text(ha.notes, style: const TextStyle(fontSize: 13, color: Color(0xFF374151))),
+          ],
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
         ],
       );
     }
@@ -1514,6 +1776,7 @@
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+<<<<<<< HEAD
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -1532,6 +1795,143 @@
                     style: const TextStyle(
                         fontSize: 12, color: Color(0xFF92400E))),
               ],
+=======
+          Expanded(
+            child: Text(label, style: TextStyle(fontSize: compact ? 11 : 13, color: const Color(0xFF6B7280))),
+          ),
+          Text(value,
+              style: TextStyle(
+                  fontSize: compact ? 11 : 13,
+                  fontWeight: FontWeight.w600,
+                  color: flagged ? const Color(0xFFEF4444) : const Color(0xFF1A2340))),
+          if (flagged) ...[
+            const SizedBox(width: 4),
+            const Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFEF4444)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _flaggedItemsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(child: Text(tr('Flagged items'),
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF991B1B)))),
+              Text('$_flaggedCount flagged',
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF991B1B))),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        ...widget.sections.asMap().entries.expand((entry) {
+          final i = entry.key;
+          final section = entry.value;
+          final flagged = section.questions
+              .where((q) => widget.answers[q.code] == 'NO')
+              .toList();
+          if (flagged.isEmpty) return <Widget>[];
+          return [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                'SECTION ${i + 1}: ${section.title.toUpperCase()}',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.secondary.withValues(alpha: 0.6),
+                    letterSpacing: 0.5),
+              ),
+            ),
+            ...flagged.map((q) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text('${q.code}. ${q.text}',
+                            style: const TextStyle(
+                                fontSize: 13, color: Color(0xFF374151))),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(tr('NO'),
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                )),
+          ];
+        }),
+      ],
+    );
+  }
+
+  Widget _actionsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFBEB),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(tr('Actions'),
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF92400E))),
+              Text('$_actionsCount action${_actionsCount == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF92400E))),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        ...widget.sections.asMap().entries.expand((entry) {
+          final i = entry.key;
+          final section = entry.value;
+          final actionQs = section.questions
+              .where((q) => widget.actions.containsKey(q.code))
+              .toList();
+          if (actionQs.isEmpty) return <Widget>[];
+          return [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                'SECTION ${i + 1}: ${section.title.toUpperCase()}',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.secondary.withValues(alpha: 0.6),
+                    letterSpacing: 0.5),
+              ),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
             ),
           ),
           const SizedBox(height: 10),
@@ -1652,6 +2052,86 @@
                                             fontWeight: FontWeight.w500)),
                                   ],
                                 ],
+<<<<<<< HEAD
+=======
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ];
+        }),
+      ],
+    );
+  }
+
+  Widget _checklistSummarySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(tr('CHECKLIST SUMMARY/AUDIT'),
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1F579C))),
+        ),
+        const SizedBox(height: 12),
+        ...widget.sections.asMap().entries.map((entry) {
+          final i = entry.key;
+          final section = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Section ${i + 1}: ${section.title}',
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A2340))),
+                const SizedBox(height: 8),
+                ...section.questions.map((q) {
+                  final answer = widget.answers[q.code] ?? '';
+                  final comment = widget.comments[q.code] ?? '';
+                  final mediaList = widget.mediaFiles[q.code] ?? [];
+                  final isUnanswered = answer.isEmpty;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text('${q.code}. ${q.text}',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: isUnanswered
+                                          ? const Color(0xFFF59E0B)
+                                          : const Color(0xFF374151))),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isUnanswered
+                                    ? const Color(0xFFFEF3C7)
+                                    : _answerColor(answer),
+                                borderRadius: BorderRadius.circular(6),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
                               ),
                             ],
                           ),
@@ -1839,6 +2319,7 @@
                   ],
                 ),
               ),
+<<<<<<< HEAD
               if (widget.signatureBytes != null) ...[
                 const SizedBox(width: 24),
                 Container(
@@ -1853,6 +2334,74 @@
                     borderRadius: BorderRadius.circular(10),
                     child: Image.memory(widget.signatureBytes!,
                         fit: BoxFit.contain),
+=======
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Divider(color: Color(0xFFE0E3EA), height: 1),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: _isGenerating ? null : _downloadPdf,
+                      icon: _isGenerating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: _headerColor))
+                          : const Icon(Icons.download_outlined, size: 18),
+                      label: Text(tr('Download'),
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _headerColor,
+                        side: const BorderSide(color: _headerColor, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        backgroundColor: _headerColor.withValues(alpha: 0.05),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: FilledButton.icon(
+                      onPressed: _isGenerating ? null : _sharePdf,
+                      icon: const Icon(Icons.share_outlined, size: 18),
+                      label: Text(tr('Share'),
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3)),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _headerColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
                   ),
                 ),
               ],

@@ -14,7 +14,24 @@ import 'package:mine_wadhwani/presentation/screens/pending_inspections/pending_i
 import 'package:mine_wadhwani/presentation/screens/profile/profile_screen.dart';
 import 'package:mine_wadhwani/presentation/screens/risk_analysis/risk_analysis_screen.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+<<<<<<< HEAD
 import 'package:mine_wadhwani/presentation/screens/home/emergency_contacts_sheet.dart';
+=======
+import 'package:mine_wadhwani/core/di/injection_container.dart';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
+import 'package:mine_wadhwani/core/network/outbox.dart';
+import 'package:mine_wadhwani/presentation/screens/agent/actions_screen.dart';
+import 'package:mine_wadhwani/presentation/screens/agent/agents_hub_screen.dart';
+import 'package:mine_wadhwani/presentation/screens/agent/chat_screen.dart';
+import 'package:mine_wadhwani/presentation/screens/agent/dashboard_screen.dart';
+import 'package:mine_wadhwani/presentation/screens/agent/handover_screen.dart';
+
+/// Current connection state first, then every change (onConnectivityChanged alone only fires on changes).
+Stream<List<ConnectivityResult>> _connectivity() async* {
+  yield await Connectivity().checkConnectivity();
+  yield* Connectivity().onConnectivityChanged;
+}
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
 
 @RoutePage()
 class HomePage extends StatelessWidget {
@@ -24,60 +41,66 @@ class HomePage extends StatelessWidget {
   static const Color blue = Color(0xFF2563EB);
   static const Color accentOrange = Color(0xFFE8450A);
 
-  static const List<_DashboardCard> _cards = [
+  static List<_DashboardCard> get _cards => [
     _DashboardCard(
       icon: Icons.checklist_rounded,
       iconBgColor: primary,
       iconColor: Colors.white,
       accentColor: primary,
-      title: 'Start Inspection',
+      title: tr('Start Inspection'),
       description:
-          'Execute scheduled site audits and safety checklists for the current sector.',
+          tr('Execute scheduled site audits and safety checklists for the current sector.'),
     ),
     _DashboardCard(
       icon: Icons.warning_amber_rounded,
       iconBgColor: Color(0xFFFFE5E5),
       iconColor: Color(0xFFD9534F),
       accentColor: Color(0xFFD9534F),
-      title: 'Report Issue',
+      title: tr('Report Issue'),
       description:
-          'Immediate logging for critical risks, environmental hazards, or equipment failures.',
+          tr('Immediate logging for critical risks, environmental hazards, or equipment failures.'),
     ),
     _DashboardCard(
       icon: Icons.engineering_rounded,
       iconBgColor: Color(0xFFE8F0FB),
       iconColor: blue,
       accentColor: blue,
-      title: 'Corrective Actions',
-      description:
-          'Manage and resolve tasks assigned to your division or specific sector area.',
+      title: tr('actions'),
+      description: tr('card_actions_desc'),
     ),
     _DashboardCard(
       icon: Icons.history_rounded,
       iconBgColor: Color(0xFFFFF0E5),
       iconColor: Color(0xFFD4A017),
       accentColor: Color(0xFFD4A017),
-      title: 'Pending Inspections',
+      title: tr('Pending Inspections'),
       description:
-          'Resume draft inspections or review reports waiting for final submission data.',
+          tr('Resume draft inspections or review reports waiting for final submission data.'),
     ),
     _DashboardCard(
       icon: Icons.verified_rounded,
       iconBgColor: Color(0xFFE8F8F0),
       iconColor: Color(0xFF3DAA6E),
       accentColor: Color(0xFF3DAA6E),
-      title: 'My Approvals',
-      description:
-          'Verify and authorize completed hazard remediations and safety sign-offs.',
+      title: tr('handover'),
+      description: tr('card_handover_desc'),
     ),
     _DashboardCard(
       icon: Icons.query_stats_rounded,
       iconBgColor: Color(0xFFF0F0F0),
       iconColor: Color(0xFF888888),
       accentColor: Color(0xFF888888),
-      title: 'Risk Analytics',
+      title: tr('Risk Analytics'),
       description:
-          'Compute spontaneous heating risk index using sensor data — temperature, humidity, O₂, CO, and coal grade.',
+          tr('Compute spontaneous heating risk index using sensor data — temperature, humidity, O₂, CO, and coal grade.'),
+    ),
+    _DashboardCard(
+      icon: Icons.insights_rounded,
+      iconBgColor: const Color(0xFFEDE9FE),
+      iconColor: const Color(0xFF6D28D9),
+      accentColor: const Color(0xFF6D28D9),
+      title: tr('dashboard'),
+      description: tr('dashboard_desc'),
     ),
   ];
 
@@ -91,9 +114,19 @@ class HomePage extends StatelessWidget {
       case 3:
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const PendingInspectionsScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const PendingInspectionsScreen()),
+        );
+        break;
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ActionsScreen()),
+        );
+        break;
+      case 4:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const HandoverScreen()),
         );
         break;
       case 5:
@@ -102,16 +135,22 @@ class HomePage extends StatelessWidget {
           MaterialPageRoute(builder: (_) => const RiskAnalysisScreen()),
         );
         break;
+      case 6: // Mines Dashboard (admins only)
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+        break;
     }
   }
 
   // ─── Draft count ──────────────────────────────────────────────────────────
 
   int _draftCount(DraftState state) => switch (state) {
-        DraftLoaded(drafts: final d) => d.length,
-        DraftSaved(drafts: final d) => d.length,
-        _ => 0,
-      };
+    DraftLoaded(drafts: final d) => d.length,
+    DraftSaved(drafts: final d) => d.length,
+    _ => 0,
+  };
 
   // ─── Build ────────────────────────────────────────────────────────────────
 
@@ -119,13 +158,21 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        final userName =
-            authState is Authenticated ? authState.user.name : 'User';
-        final userRole =
-            authState is Authenticated ? authState.user.role : '';
+        final userName = authState is Authenticated
+            ? authState.user.name
+            : 'User';
+        final userRole = authState is Authenticated ? authState.user.role : '';
 
         return Scaffold(
           backgroundColor: const Color(0xFFF5F7FA),
+          floatingActionButton: FloatingActionButton.extended(
+            backgroundColor: primary,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.support_agent),
+            label: Text(tr('assistant')),
+            onPressed: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const ChatScreen())),
+          ),
           body: Column(
             children: [
               BlocBuilder<DraftBloc, DraftState>(
@@ -139,16 +186,21 @@ class HomePage extends StatelessWidget {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 20),
+                    horizontal: 20,
+                    vertical: 20,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // Header row (wraps on phones)
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.start,
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 width: 4,
@@ -159,11 +211,12 @@ class HomePage extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Column(
+                              Flexible(
+                                child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Command Center',
+                                  Text(
+                                    tr('Command Center'),
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w800,
@@ -172,36 +225,46 @@ class HomePage extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 6),
-                                  Row(
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 3),
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFF5F7FA),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                           border: Border.all(
-                                              color: Colors.grey.shade200),
+                                            color: Colors.grey.shade200,
+                                          ),
                                         ),
                                         child: Text(
-                                          'Operations Dashboard',
+                                          tr('Operations Dashboard'),
                                           style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey[500]),
+                                            fontSize: 11,
+                                            color: Colors.grey[500],
+                                          ),
                                         ),
                                       ),
-                                      const SizedBox(width: 6),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 3),
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFFFF3EE),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                           border: Border.all(
                                             color: accentOrange.withValues(
-                                                alpha: 0.3),
+                                              alpha: 0.3,
+                                            ),
                                           ),
                                         ),
                                         child: Text(
@@ -217,24 +280,40 @@ class HomePage extends StatelessWidget {
                                   ),
                                 ],
                               ),
+                              ),
                             ],
                           ),
                           ElevatedButton.icon(
+<<<<<<< HEAD
                             onPressed: () => EmergencyContactsSheet.show(context),
                             icon: const Icon(Icons.phone_in_talk_rounded,
                                 size: 15),
                             label: const Text(
                               'Emergency Contact',
+=======
+                            onPressed: () {},
+                            icon: const Icon(
+                              Icons.phone_in_talk_rounded,
+                              size: 15,
+                            ),
+                            label: Text(
+                              tr('Emergency Contact'),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
                               style: TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 14),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFD32F2F),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 18, vertical: 14),
+                                horizontal: 18,
+                                vertical: 14,
+                              ),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               elevation: 0,
                             ),
                           ),
@@ -247,23 +326,30 @@ class HomePage extends StatelessWidget {
                       BlocBuilder<DraftBloc, DraftState>(
                         builder: (context, draftState) {
                           final count = _draftCount(draftState);
+                          final w = MediaQuery.sizeOf(context).width;
                           return GridView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _cards.length,
+                            // Mines Dashboard (last card) is for admins only.
+                            itemCount: authState is Authenticated &&
+                                    authState.user.isAdmin
+                                ? _cards.length
+                                : _cards.length - 1,
                             gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 1.5,
-                            ),
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: w < 600
+                                      ? 1
+                                      : (w < 1000 ? 2 : 3),
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                  mainAxisExtent: w < 600 ? 180 : 210,
+                                ),
                             itemBuilder: (context, index) =>
                                 _buildDashboardCard(
-                              _cards[index],
-                              badge: index == 3 && count > 0 ? count : null,
-                              onTap: () => _onCardTap(context, index),
-                            ),
+                                  _cards[index],
+                                  badge: index == 3 && count > 0 ? count : null,
+                                  onTap: () => _onCardTap(context, index),
+                                ),
                           );
                         },
                       ),
@@ -286,18 +372,25 @@ class HomePage extends StatelessWidget {
     String userRole,
     int pendingCount,
   ) {
+    // Phones: hide labels, keep icons (user name stays in the avatar menu).
+    final narrow = MediaQuery.sizeOf(context).width < 900;
     return Container(
       color: primary,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: narrow ? 12 : 20, vertical: 12),
       child: SafeArea(
         bottom: false,
         child: Row(
           children: [
-            Column(
+            // Width cap (not Flexible) so the Spacer below pushes the icons to the far right.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: narrow ? 78 : 220),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'AIMSURE',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
@@ -306,89 +399,170 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Mine Safety Solution',
+                  tr('Mine Safety Solution'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.white54, fontSize: 10),
                 ),
               ],
             ),
-            const SizedBox(width: 16),
-            Container(width: 1, height: 36, color: Colors.white24),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Welcome,',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-                Text(
-                  userName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.white,
-                  ),
-                ),
-                if (userRole.isNotEmpty)
+            ),
+            if (!narrow) ...[
+              const SizedBox(width: 16),
+              Container(width: 1, height: 36, color: Colors.white24),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    userRole,
+                    tr('Welcome,'),
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  Text(
+                    userName,
                     style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white,
                     ),
                   ),
-              ],
-            ),
+                  if (userRole.isNotEmpty)
+                    Text(
+                      userRole,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ],
             const Spacer(),
 
+<<<<<<< HEAD
             const _ConnectivityIndicator(),
             const SizedBox(width: 8),
             const _ToolsMenuButton(),
             const SizedBox(width: 12),
+=======
+            // Online badge — now reactive
+            StreamBuilder<List<ConnectivityResult>>(
+              stream: _connectivity(),
+              initialData: const [ConnectivityResult.wifi], // optimistic until the real check returns
+              builder: (context, snapshot) {
+                final results = snapshot.data ?? [ConnectivityResult.none];
+                final isOnline = !results.contains(ConnectivityResult.none);
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white12,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isOnline ? Icons.wifi : Icons.wifi_off,
+                        color: isOnline ? Colors.greenAccent : Colors.redAccent,
+                        size: 14,
+                      ),
+                      if (!narrow) const SizedBox(width: 5),
+                      if (!narrow)
+                        Text(
+                          isOnline ? 'ONLINE' : 'OFFLINE',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            ValueListenableBuilder<int>(
+              valueListenable: sl<Outbox>().pending,
+              builder: (context, n, _) => n == 0
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Chip(
+                        avatar: const Icon(
+                          Icons.cloud_upload_outlined,
+                          size: 16,
+                        ),
+                        label: Text(narrow ? '$n' : '$n ${tr('pending_sync')}'),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+            ),
+            SizedBox(width: narrow ? 4 : 12),
+
+            // AI agents status
+            IconButton(
+              tooltip: tr('ai_agents'),
+              visualDensity: narrow ? VisualDensity.compact : null,
+              icon: const Icon(Icons.smart_toy_outlined, color: Colors.white, size: 24),
+              onPressed: () => Navigator.push(
+                  context, MaterialPageRoute(builder: (_) => const AgentsHubScreen())),
+            ),
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
 
             // Notification bell
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined,
-                  color: Colors.white, size: 24),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const NotificationScreen()),
-              ),
-            ),
-            const SizedBox(width: 12),
+            const UnreadAlertsBell(),
+            SizedBox(width: narrow ? 4 : 12),
 
             // CHECK PENDING — tappable, live count
             GestureDetector(
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => const PendingInspectionsScreen()),
+                  builder: (_) => const PendingInspectionsScreen(),
+                ),
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
+                padding: EdgeInsets.symmetric(
+                  horizontal: narrow ? 8 : 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.white38),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
                   children: [
-                    const Text(
-                      'CHECK PENDING',
-                      style: TextStyle(
+                    if (narrow)
+                      const Icon(
+                        Icons.pending_actions,
                         color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        size: 18,
+                      )
+                    else
+                      Text(
+                        tr('CHECK PENDING'),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 3),
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: pendingCount > 0
                             ? Colors.redAccent
@@ -414,7 +588,8 @@ class HomePage extends StatelessWidget {
             PopupMenuButton(
               offset: const Offset(0, 48),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               color: Colors.white,
               itemBuilder: (context) => [
                 PopupMenuItem(
@@ -425,9 +600,7 @@ class HomePage extends StatelessWidget {
                         radius: 26,
                         backgroundColor: const Color(0xFFE8F0FB),
                         child: Text(
-                          userName.isNotEmpty
-                              ? userName[0].toUpperCase()
-                              : 'U',
+                          userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
@@ -436,18 +609,24 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(userName,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: Colors.black87)),
+                      Text(
+                        userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      ),
                       if (userRole.isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text(userRole,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.w500)),
+                        Text(
+                          userRole,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 4),
                       const Divider(height: 1),
@@ -457,24 +636,31 @@ class HomePage extends StatelessWidget {
                 PopupMenuItem(
                   value: 'profile',
                   child: Row(
-                    children: const [
-                      Icon(Icons.person_outline_rounded,
-                          size: 17, color: Colors.black54),
+                    children: [
+                      Icon(
+                        Icons.person_outline_rounded,
+                        size: 17,
+                        color: Colors.black54,
+                      ),
                       SizedBox(width: 10),
-                      Text('My Profile', style: TextStyle(fontSize: 13)),
+                      Text(tr('My Profile'), style: TextStyle(fontSize: 13)),
                     ],
                   ),
                 ),
                 PopupMenuItem(
                   value: 'logout',
                   child: Row(
-                    children: const [
-                      Icon(Icons.logout_rounded,
-                          size: 17, color: Colors.redAccent),
+                    children: [
+                      Icon(
+                        Icons.logout_rounded,
+                        size: 17,
+                        color: Colors.redAccent,
+                      ),
                       SizedBox(width: 10),
-                      Text('Logout',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.redAccent)),
+                      Text(
+                        tr('Logout'),
+                        style: TextStyle(fontSize: 13, color: Colors.redAccent),
+                      ),
                     ],
                   ),
                 ),
@@ -569,12 +755,13 @@ class HomePage extends StatelessWidget {
                         color: card.iconBgColor,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(card.icon,
-                          color: card.iconColor, size: 26),
+                      child: Icon(card.icon, color: card.iconColor, size: 26),
                     ),
                     const Spacer(),
                     Text(
                       card.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
@@ -584,6 +771,8 @@ class HomePage extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       card.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[500],
@@ -600,7 +789,9 @@ class HomePage extends StatelessWidget {
                   right: 10,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 3),
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,
                       borderRadius: BorderRadius.circular(10),
@@ -632,8 +823,18 @@ class HomePage extends StatelessWidget {
   String _formattedDate() {
     final now = DateTime.now();
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[now.month - 1]} ${now.day}, ${now.year}';
   }
@@ -656,6 +857,7 @@ class _DashboardCard {
     required this.description,
   });
 }
+<<<<<<< HEAD
 
 
 class _ConnectivityIndicator extends StatefulWidget {
@@ -788,3 +990,5 @@ class _ToolsMenuButton extends StatelessWidget {
   }
 }
 
+=======
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa

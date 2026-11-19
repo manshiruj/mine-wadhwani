@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
@@ -46,11 +47,7 @@ class _ChecklistPageState extends State<ChecklistPage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-  }
+      }
 
   @override
   void dispose() {
@@ -85,9 +82,11 @@ class _ChecklistPageState extends State<ChecklistPage> {
           listener: (context, state) {
             if (state is ChecklistSubmitted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Checklist submitted successfully!'),
-                  backgroundColor: Colors.green,
+                SnackBar(
+                  content: Text(state.queued
+                      ? tr('queued_offline')
+                      : 'Checklist submitted successfully!'),
+                  backgroundColor: state.queued ? Colors.orange : Colors.green,
                 ),
               );
               context.router.maybePop();
@@ -108,12 +107,12 @@ class _ChecklistPageState extends State<ChecklistPage> {
 
             final questions = _getQuestions(state);
             if (questions == null) {
-              return const Center(child: Text('Failed to load checklist.'));
+              return Center(child: Text(tr('Failed to load checklist.')));
             }
 
             final sections = _getSections(questions);
             if (sections.isEmpty) {
-              return const Center(child: Text('No questions found.'));
+              return Center(child: Text(tr('No questions found.')));
             }
 
             if (_currentSectionIndex >= sections.length) {
@@ -344,7 +343,7 @@ class _ChecklistPageState extends State<ChecklistPage> {
             if (hasAnswer) ...[
               const SizedBox(height: 14),
               Text(
-                'COMMENTS',
+                tr('COMMENTS'),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -488,7 +487,7 @@ class _ChecklistPageState extends State<ChecklistPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Select Image Source',
+                tr('Select Image Source'),
                 style: AppTextStyles.titleLarge.copyWith(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
@@ -506,9 +505,9 @@ class _ChecklistPageState extends State<ChecklistPage> {
                   child: const Icon(Icons.camera_alt_rounded,
                       color: Color(0xFF2C3E6B)),
                 ),
-                title: const Text('Camera',
+                title: Text(tr('Camera'),
                     style: TextStyle(fontWeight: FontWeight.w500)),
-                subtitle: const Text('Take a photo'),
+                subtitle: Text(tr('Take a photo')),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
               ListTile(
@@ -522,9 +521,9 @@ class _ChecklistPageState extends State<ChecklistPage> {
                   child: const Icon(Icons.photo_library_rounded,
                       color: Color(0xFF2C3E6B)),
                 ),
-                title: const Text('Gallery',
+                title: Text(tr('Gallery'),
                     style: TextStyle(fontWeight: FontWeight.w500)),
-                subtitle: const Text('Choose from gallery'),
+                subtitle: Text(tr('Choose from gallery')),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
             ],
@@ -596,7 +595,7 @@ class _ChecklistPageState extends State<ChecklistPage> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Add Media',
+              tr('Add Media'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -724,7 +723,7 @@ class _ChecklistPageState extends State<ChecklistPage> {
                       ),
                     ),
                     child: Text(
-                      'PREVIOUS',
+                      tr('PREVIOUS'),
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,

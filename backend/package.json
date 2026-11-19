@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "nodemon index.js",
     "format": "prettier --write .",
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test test/"
   },
   "author": "Vaibhav Aryan",
   "license": "ISC",

@@ -37,6 +37,10 @@ const auth_middleware = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    // Expired / tampered token: tell the app to log in again (401), not a server error.
+    if (error.name === "TokenExpiredError" || error.name === "JsonWebTokenError") {
+      return res.status(401).json(ApiResponse.error("Session expired, please log in again", 401));
+    }
     return res.status(500).json(ApiResponse.error(`${error.message}`, 500));
   }
 };

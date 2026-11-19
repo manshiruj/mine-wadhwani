@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,11 +37,7 @@ class _ChecklistOverviewPageState extends State<ChecklistOverviewPage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    // Refresh checklist data each time this screen is opened
+        // Refresh checklist data each time this screen is opened
     sl<ChecklistBloc>().add(const FetchChecklist());
   }
 
@@ -91,12 +88,12 @@ class _ChecklistOverviewPageState extends State<ChecklistOverviewPage> {
 
             final questions = _getQuestions(state);
             if (questions == null) {
-              return const Center(child: Text('Failed to load checklist.'));
+              return Center(child: Text(tr('Failed to load checklist.')));
             }
 
             final sections = _getSections(questions);
             if (sections.isEmpty) {
-              return const Center(child: Text('No questions found.'));
+              return Center(child: Text(tr('No questions found.')));
             }
 
             final totalAnswered =
@@ -122,7 +119,7 @@ class _ChecklistOverviewPageState extends State<ChecklistOverviewPage> {
                           const SizedBox(height: 28),
                           // Section heading
                           Text(
-                            'CHECKLIST SECTIONS',
+                            tr('CHECKLIST SECTIONS'),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -200,7 +197,7 @@ class _ChecklistOverviewPageState extends State<ChecklistOverviewPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Inspection Overview',
+                  tr('Inspection Overview'),
                   style: AppTextStyles.headlineMedium.copyWith(
                     color: const Color(0xFFFFFFFF),
                     fontWeight: FontWeight.w800,
@@ -209,7 +206,7 @@ class _ChecklistOverviewPageState extends State<ChecklistOverviewPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Select an area to begin inspection',
+                  tr('Select an area to begin inspection'),
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: const Color(0xFFBDBDBD),
                     fontSize: 14,
@@ -258,7 +255,7 @@ class _ChecklistOverviewPageState extends State<ChecklistOverviewPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'OVERALL PROGRESS',
+                tr('OVERALL PROGRESS'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,

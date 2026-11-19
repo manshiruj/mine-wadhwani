@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -404,7 +405,7 @@ class _ActionPageState extends State<ActionPage> {
 
   Widget _buildTitleField() {
     return _buildCard(
-      label: 'TITLE',
+      label: tr('TITLE'),
       child: Theme(
         data: Theme.of(context).copyWith(
           colorScheme:
@@ -426,7 +427,7 @@ class _ActionPageState extends State<ActionPage> {
 
   Widget _buildDescField() {
     return _buildCard(
-      label: 'DESCRIPTION',
+      label: tr('DESCRIPTION'),
       child: Theme(
         data: Theme.of(context).copyWith(
           colorScheme:
@@ -449,7 +450,7 @@ class _ActionPageState extends State<ActionPage> {
 
   Widget _buildPrioritySection() {
     return _buildCard(
-      label: 'PRIORITY',
+      label: tr('PRIORITY'),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -508,7 +509,7 @@ class _ActionPageState extends State<ActionPage> {
 
   Widget _buildDueDateSection() {
     return _buildCard(
-      label: 'DUE DATE',
+      label: tr('DUE DATE'),
       child: GestureDetector(
         onTap: _pickDate,
         child: Container(
@@ -533,7 +534,7 @@ class _ActionPageState extends State<ActionPage> {
                     : const Color(0xFF9CA3AF),
               ),
               const SizedBox(width: 10),
-              Text(
+              Expanded(child: Text(
                 _dueDate != null
                     ? _formatDate(_dueDate!)
                     : 'Select due date',
@@ -546,7 +547,7 @@ class _ActionPageState extends State<ActionPage> {
                       ? const Color(0xFF1A2340)
                       : const Color(0xFF9CA3AF),
                 ),
-              ),
+              )),
               const Spacer(),
               if (_dueDate != null)
                 GestureDetector(
@@ -566,7 +567,7 @@ class _ActionPageState extends State<ActionPage> {
 
   Widget _buildAssigneeSection() {
     return _buildCard(
-      label: 'ASSIGNEE',
+      label: tr('ASSIGNEE'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -605,7 +606,7 @@ class _ActionPageState extends State<ActionPage> {
                           ),
                         ),
                         Text(
-                          'Auto-assigned (logged in user)',
+                          tr('Auto-assigned (logged in user)'),
                           style: TextStyle(
                             fontSize: 11,
                             color: const Color(0xFF6B7280)
@@ -615,7 +616,7 @@ class _ActionPageState extends State<ActionPage> {
                       ],
                     )
                   : Text(
-                      'No user session found',
+                      tr('No user session found'),
                       style: TextStyle(
                         fontSize: 14,
                         color: const Color(0xFF9CA3AF).withValues(alpha: 0.8),

@@ -42,7 +42,12 @@ class ChecklistSubmitting extends ChecklistState {
 }
 
 class ChecklistSubmitted extends ChecklistState {
-  const ChecklistSubmitted();
+  /// true when saved on-device (offline) and waiting for sync.
+  final bool queued;
+  const ChecklistSubmitted({this.queued = false});
+
+  @override
+  List<Object?> get props => [queued];
 }
 
 class ChecklistError extends ChecklistState {

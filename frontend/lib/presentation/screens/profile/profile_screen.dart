@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -24,13 +25,13 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: primary,
         elevation: 0,
-        title: const Text(
-          "My Profile",
+        title: Text(
+          tr("My Profile"),
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
 
-      body: Column(
+      body: ListView(
         children: [
           // 🔷 Header Card
           Container(
@@ -96,6 +97,23 @@ class ProfileScreen extends StatelessWidget {
                   _buildTile(Icons.phone_outlined, "Phone", phone),
                   const Divider(height: 1),
                   _buildTile(Icons.work_outline, "Designation", role),
+                  const Divider(height: 1),
+                  ValueListenableBuilder<String>(
+                    valueListenable: AppLanguage.current,
+                    builder: (context, lang, _) => ListTile(
+                      leading: const Icon(Icons.translate, color: primary),
+                      title: Text(tr('language'),
+                          style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                      trailing: DropdownButton<String>(
+                        value: lang,
+                        underline: const SizedBox(),
+                        items: AppLanguage.supported.entries
+                            .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                            .toList(),
+                        onChanged: (v) => v == null ? null : AppLanguage.set(v),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

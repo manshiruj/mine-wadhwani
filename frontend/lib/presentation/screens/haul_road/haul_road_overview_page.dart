@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // lib/presentation/screens/haul_road/haul_road_overview_page.dart
 
 import 'package:auto_route/auto_route.dart';
@@ -57,6 +59,10 @@ class _HaulRoadOverviewPageState extends State<HaulRoadOverviewPage> {
   final Map<String, String> _actions = {};
 
   late final String _draftId;
+  late final DraftBloc _draftBloc;
+  bool _autoSaving = false; // background save: don't show the "Draft saved" snackbar
+  bool _completing = false; // submit screen is open; skip auto-save if it closes this page
+  String? _lastSavedSig;
 
   static const _headerColor = Color(0xFF1F579C);
 
@@ -81,6 +87,7 @@ class _HaulRoadOverviewPageState extends State<HaulRoadOverviewPage> {
   @override
   void initState() {
     super.initState();
+    _draftBloc = context.read<DraftBloc>();
 
     _draftId = widget.draftId ??
         '${widget.mineName}_${widget.area}_${widget.shift}_haul_${DateTime.now().millisecondsSinceEpoch}';
@@ -98,11 +105,7 @@ class _HaulRoadOverviewPageState extends State<HaulRoadOverviewPage> {
       }
     }
 
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: _headerColor,
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
@@ -111,6 +114,7 @@ class _HaulRoadOverviewPageState extends State<HaulRoadOverviewPage> {
 
   @override
   void dispose() {
+    if (!_completing) _autoSave(); // leaving mid-inspection keeps it in Pending Inspections
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -151,7 +155,7 @@ int _totalQuestions() =>
 
   // ─── Save Draft ───────────────────────────────────────────────────────────
 
-  void _saveDraft(BuildContext context) {
+  InspectionDraft _currentDraft() {
     final answers = <Map<String, dynamic>>[];
     for (final section in _sections) {
       for (final q in section.questions) {
@@ -179,7 +183,31 @@ int _totalQuestions() =>
       answers: answers,
     );
 
-    context.read<DraftBloc>().add(SaveDraft(draft));
+    return draft;
+  }
+
+  void _saveDraft(BuildContext context) =>
+      context.read<DraftBloc>().add(SaveDraft(_currentDraft()));
+
+  // Background save so an interrupted inspection (back press, app closed, phone off)
+  // still shows under Pending Inspections. Skips unchanged or empty inspections.
+  void _autoSave() {
+    if (_totalAnswered() == 0) return;
+    final draft = _currentDraft();
+    final sig = jsonEncode(draft.answers);
+    if (sig == _lastSavedSig) return;
+    _lastSavedSig = sig;
+    _autoSaving = true;
+    _draftBloc.add(SaveDraft(draft));
+  }
+
+  void _onChecklistProgress(Map<String, String> result) {
+    // May be called while the checklist page is being disposed: apply after the frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _applyResult(result);
+      _autoSave();
+    });
   }
 
   // ─── Complete Inspection ──────────────────────────────────────────────────
@@ -188,6 +216,7 @@ int _totalQuestions() =>
     final authState = context.read<AuthBloc>().state;
     final user = authState is Authenticated ? authState.user : null;
 
+    _completing = true;
     Navigator.of(context)
         .push<bool>(
       MaterialPageRoute(
@@ -213,6 +242,7 @@ int _totalQuestions() =>
       ),
     )
         .then((submitted) {
+      _completing = false;
       if (submitted == true && mounted) {
         context.read<DraftBloc>().add(DeleteDraft(_draftId));
       }
@@ -220,6 +250,29 @@ int _totalQuestions() =>
   }
 
   // ─── Section navigation ───────────────────────────────────────────────────
+
+  void _applyResult(Map<String, String> result) {
+    setState(() {
+      for (final entry in result.entries) {
+        if (entry.key == '__next__') continue;
+        if (entry.key.startsWith('a:')) {
+          _answers[entry.key.substring(2)] = entry.value;
+        } else if (entry.key.startsWith('c:')) {
+          _comments[entry.key.substring(2)] = entry.value;
+        } else if (entry.key.startsWith('m:')) {
+          final code = entry.key.substring(2);
+          entry.value.isEmpty
+              ? _mediaFiles.remove(code)
+              : _mediaFiles[code] = entry.value.split('||');
+        } else if (entry.key.startsWith('act:')) {
+          final code = entry.key.substring(4);
+          entry.value.isEmpty
+              ? _actions.remove(code)
+              : _actions[code] = entry.value;
+        }
+      }
+    });
+  }
 
   Future<void> _openSection(int index) async {
     if (index < 0 || index >= _sections.length) return;
@@ -241,32 +294,15 @@ int _totalQuestions() =>
           area: widget.area,
           shift: widget.shift,
           inspectionType: widget.inspectionType,
+          onProgress: _onChecklistProgress,
         ),
       ),
     );
 
     if (result == null || !mounted) return;
 
-    setState(() {
-      for (final entry in result.entries) {
-        if (entry.key == '__next__') continue;
-        if (entry.key.startsWith('a:')) {
-          _answers[entry.key.substring(2)] = entry.value;
-        } else if (entry.key.startsWith('c:')) {
-          _comments[entry.key.substring(2)] = entry.value;
-        } else if (entry.key.startsWith('m:')) {
-          final code = entry.key.substring(2);
-          entry.value.isEmpty
-              ? _mediaFiles.remove(code)
-              : _mediaFiles[code] = entry.value.split('||');
-        } else if (entry.key.startsWith('act:')) {
-          final code = entry.key.substring(4);
-          entry.value.isEmpty
-              ? _actions.remove(code)
-              : _actions[code] = entry.value;
-        }
-      }
-    });
+    _applyResult(result);
+    _autoSave();
 
     final nextStr = result['__next__'];
     if (nextStr != null && mounted) {
@@ -288,11 +324,15 @@ int _totalQuestions() =>
 
     return BlocListener<DraftBloc, DraftState>(
       listener: (context, state) {
+        if (_autoSaving && (state is DraftSaved || state is DraftError)) {
+          _autoSaving = false; // background save: no snackbar
+          return;
+        }
         if (state is DraftSaved) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content:
-                  Text('Draft saved — find it under Pending Inspections'),
+                  Text(tr('Draft saved — find it under Pending Inspections')),
               backgroundColor: Color(0xFF3DAA6E),
               behavior: SnackBarBehavior.floating,
             ),
@@ -322,7 +362,7 @@ int _totalQuestions() =>
                   children: [
                     const SizedBox(height: 4),
                     Text(
-                      'CHECKLIST SECTIONS',
+                      tr('CHECKLIST SECTIONS'),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -392,7 +432,7 @@ int _totalQuestions() =>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Haul Road Inspection Checklist',
+                        tr('Haul Road Inspection Checklist'),
                         style: AppTextStyles.headlineMedium.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -439,11 +479,11 @@ int _totalQuestions() =>
                     PopupMenuItem(
                       value: _OverviewMenuOption.exitInspection,
                       child: Row(
-                        children: const [
+                        children: [
                           Icon(Icons.exit_to_app_outlined,
                               size: 20, color: Color(0xFFD32F2F)),
                           SizedBox(width: 12),
-                          Text('Exit Inspection',
+                          Text(tr('Exit Inspection'),
                               style: TextStyle(color: Color(0xFFD32F2F))),
                         ],
                       ),
@@ -460,23 +500,23 @@ int _totalQuestions() =>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'OVERALL PROGRESS',
+                    Flexible(child: Text(
+                      tr('OVERALL PROGRESS'),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: Colors.white.withValues(alpha: 0.7),
                         letterSpacing: 0.9,
                       ),
-                    ),
-                    Text(
+                    )),
+                    Flexible(child: Text(
                       '$answered / $total Completed',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
-                    ),
+                    )),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -529,7 +569,7 @@ int _totalQuestions() =>
                           color: enabled
                               ? _headerColor
                               : const Color(0xFFBDBDBD)),
-                      label: Text('Save Draft',
+                      label: Text(tr('Save Draft'),
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -564,7 +604,7 @@ int _totalQuestions() =>
                           : null,
                       icon: const Icon(Icons.check_circle_outline,
                           size: 18),
-                      label: const Text('Complete Inspection',
+                      label: Text(tr('Complete Inspection'),
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,

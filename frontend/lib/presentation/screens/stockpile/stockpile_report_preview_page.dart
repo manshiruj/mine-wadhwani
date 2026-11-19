@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -66,11 +67,7 @@ class _StockpileReportPreviewPageState
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: _headerColor,
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
@@ -893,8 +890,8 @@ class _StockpileReportPreviewPageState
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Stockpile Inspection',
+                                    Text(
+                                      tr('Stockpile Inspection'),
                                       style: TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.w800,
@@ -920,8 +917,8 @@ class _StockpileReportPreviewPageState
                                   color: const Color(0xFFD1FAE5),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: const Text(
-                                  'Complete',
+                                child: Text(
+                                  tr('Complete'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -982,7 +979,7 @@ class _StockpileReportPreviewPageState
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Conducted on',
+                                        tr('Conducted on'),
                                         style: TextStyle(
                                           fontSize: 11,
                                           color: AppColors.secondary
@@ -1012,7 +1009,7 @@ class _StockpileReportPreviewPageState
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Evaluator',
+                                        tr('Evaluator'),
                                         style: TextStyle(
                                           fontSize: 11,
                                           color: AppColors.secondary
@@ -1117,7 +1114,7 @@ class _StockpileReportPreviewPageState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Report Preview',
+                        tr('Report Preview'),
                         style: AppTextStyles.headlineMedium.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -1126,7 +1123,7 @@ class _StockpileReportPreviewPageState
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Read-only — download or share below',
+                        tr('Read-only — download or share below'),
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: Colors.white.withValues(alpha: 0.75),
                           fontSize: 13,
@@ -1270,14 +1267,14 @@ class _StockpileReportPreviewPageState
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Flagged items',
+              Flexible(child: Text(
+                tr('Flagged items'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF991B1B),
                 ),
-              ),
+              )),
               Text(
                 '$_flaggedCount flagged',
                 style: const TextStyle(
@@ -1329,8 +1326,8 @@ class _StockpileReportPreviewPageState
                           color: const Color(0xFFEF4444),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
-                          'NO',
+                        child: Text(
+                          tr('NO'),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -1363,8 +1360,8 @@ class _StockpileReportPreviewPageState
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Actions',
+              Text(
+                tr('Actions'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1551,8 +1548,8 @@ class _StockpileReportPreviewPageState
             color: const Color(0xFFEFF6FF),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Text(
-            'CHECKLIST SUMMARY/AUDIT',
+          child: Text(
+            tr('CHECKLIST SUMMARY/AUDIT'),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1796,8 +1793,8 @@ class _StockpileReportPreviewPageState
                                   strokeWidth: 2, color: _headerColor),
                             )
                           : const Icon(Icons.download_outlined, size: 18),
-                      label: const Text(
-                        'Download',
+                      label: Text(
+                        tr('Download'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -1825,8 +1822,8 @@ class _StockpileReportPreviewPageState
                     child: FilledButton.icon(
                       onPressed: _isGenerating ? null : _sharePdf,
                       icon: const Icon(Icons.share_outlined, size: 18),
-                      label: const Text(
-                        'Share',
+                      label: Text(
+                        tr('Share'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,

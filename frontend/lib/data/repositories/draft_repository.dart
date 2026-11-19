@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mine_wadhwani/core/constants/app_constants.dart';
+import 'package:mine_wadhwani/core/di/injection_container.dart';
+import 'package:mine_wadhwani/core/error/exceptions.dart';
 import 'package:mine_wadhwani/core/network/api_client.dart';
+import 'package:mine_wadhwani/core/network/outbox.dart';
 import 'package:mine_wadhwani/data/models/draft/inspection_draft_model.dart';
 import 'package:mine_wadhwani/presentation/screens/stockpile/stockpile_data.dart';
 
@@ -71,7 +74,12 @@ class DraftRepositoryImpl implements DraftRepository {
       'completed': false,
     };
 
-    await _apiClient.post('/api/v1/forms-data/save-data', data: payload);
+    try {
+      await _apiClient.post('/api/v1/forms-data/save-data', data: payload);
+    } on ServerException catch (e) {
+      if (e.statusCode != null) rethrow;
+      await sl<Outbox>().add('/api/v1/forms-data/save-data', payload); // offline: sync later
+    }
   }
 
   @override

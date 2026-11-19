@@ -1,3 +1,16 @@
+<<<<<<< HEAD
+=======
+import 'dart:async';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
+import 'package:mine_wadhwani/core/l10n/question_translator.dart';
+import 'package:mine_wadhwani/presentation/screens/agent/voice_fill.dart';
+// lib/presentation/screens/common/inspection_checklist_page.dart
+//
+// Generic checklist page used by ALL inspection types.
+// Pass the sections list from HaulRoadData.sections or StockpileData.sections
+// (after migrating stockpile to InspectionSection — see migration note below).
+
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +41,10 @@ class InspectionChecklistPage extends StatefulWidget {
   final int shift;
   final String inspectionType;
 
+  /// Called with the current answers every few seconds and when the page closes,
+  /// so the overview can auto-save a draft if the inspection is interrupted.
+  final void Function(Map<String, String>)? onProgress;
+
   const InspectionChecklistPage({
     super.key,
     required this.sectionIndex,
@@ -41,6 +58,7 @@ class InspectionChecklistPage extends StatefulWidget {
     required this.area,
     required this.shift,
     required this.inspectionType,
+    this.onProgress,
   });
 
   @override
@@ -49,6 +67,7 @@ class InspectionChecklistPage extends StatefulWidget {
 }
 
 class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
+  Timer? _progressTimer;
   static const _headerColor = Color(0xFF1F579C);
 
   late int _currentSectionIndex;
@@ -74,6 +93,8 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
   @override
   void initState() {
     super.initState();
+    _progressTimer = Timer.periodic(
+        const Duration(seconds: 10), (_) => widget.onProgress?.call(_buildResult()));
     _currentSectionIndex = widget.sectionIndex;
     _answers = Map.from(widget.answers);
     _comments = Map.from(widget.comments);
@@ -85,11 +106,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
     for (final entry in _comments.entries) {
       if (entry.value.trim().isNotEmpty) _savedNotes.add(entry.key);
     }
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: _headerColor,
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
@@ -98,6 +115,8 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
 
   @override
   void dispose() {
+    _progressTimer?.cancel();
+    widget.onProgress?.call(_buildResult()); // back press / browser back without "save"
     for (final c in _controllers.values) c.dispose();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
@@ -114,6 +133,19 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
   }
 
   // ─── Controllers ──────────────────────────────────────────────────────────
+
+  /// Applies AI voice-fill answers; supervisor reviews them on screen before saving.
+  void _applyVoiceAnswers(List<VoiceAnswer> answers) {
+    setState(() {
+      for (final a in answers) {
+        _answers[a.code] = a.answer;
+        if (a.comment.isNotEmpty) {
+          _comments[a.code] = a.comment;
+          _controller(a.code).text = a.comment;
+        }
+      }
+    });
+  }
 
   TextEditingController _controller(String code) =>
       _controllers.putIfAbsent(
@@ -338,12 +370,12 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Add Media',
+                      Text(tr('Add Media'),
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF1A2340))),
-                      Text('Attach photos to this inspection point',
+                      Text(tr('Attach photos to this inspection point'),
                           style: TextStyle(
                               fontSize: 12,
                               color: AppColors.secondary.withValues(alpha: 0.6))),
@@ -356,8 +388,8 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                 icon: Icons.camera_alt_outlined,
                 iconBg: const Color(0xFFE8F0FB),
                 iconColor: _headerColor,
-                label: 'Take Photo',
-                subtitle: 'Open camera and capture now',
+                label: tr('Take Photo'),
+                subtitle: tr('Open camera and capture now'),
                 onTap: () => _pickFromCamera(code),
               ),
               const SizedBox(height: 10),
@@ -365,8 +397,8 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                 icon: Icons.photo_library_outlined,
                 iconBg: const Color(0xFFF0FAF5),
                 iconColor: const Color(0xFF10B981),
-                label: 'Insert from Gallery',
-                subtitle: 'Choose an existing photo from your library',
+                label: tr('Insert from Gallery'),
+                subtitle: tr('Choose an existing photo from your library'),
                 onTap: () => _pickFromGallery(code),
               ),
               const SizedBox(height: 8),
@@ -514,7 +546,19 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 40),
+                VoiceFillButton(
+                  // Whole checklist (current section first), so voice works from any section.
+                  questions: [
+                    ..._currentSection.questions,
+                    ...widget.sections
+                        .where((sec) => sec != _currentSection)
+                        .expand((sec) => sec.questions),
+                  ]
+                      .where((q) => q.type == InspectionQuestionType.yesNo)
+                      .map((q) => (code: q.code, text: q.text))
+                      .toList(),
+                  onApply: _applyVoiceAnswers,
+                ),
               ],
             ),
           ),
@@ -525,7 +569,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('PROGRESS',
+                    Text(tr('PROGRESS'),
                         style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -623,7 +667,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 6, bottom: 12),
-                  child: Text(question.text,
+                  child: TrText(question.text,
                       style: AppTextStyles.bodyMedium
                           .copyWith(fontSize: 15, height: 1.4)),
                 ),
@@ -687,7 +731,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 6, bottom: 14),
-                  child: Text(question.text,
+                  child: TrText(question.text,
                       style: AppTextStyles.bodyMedium
                           .copyWith(fontSize: 15, height: 1.4)),
                 ),
@@ -753,7 +797,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 6, bottom: 14),
-                  child: Text(question.text,
+                  child: TrText(question.text,
                       style: AppTextStyles.bodyMedium
                           .copyWith(fontSize: 15, height: 1.4)),
                 ),
@@ -861,7 +905,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(question.text,
+                  child: TrText(question.text,
                       style: AppTextStyles.bodyMedium
                           .copyWith(fontSize: 15, height: 1.4)),
                 ),
@@ -875,8 +919,9 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
           const SizedBox(height: 14),
 
           // Bottom action row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween, // wraps on narrow phones
             children: [
               // Add note
               GestureDetector(
@@ -919,7 +964,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                   ),
                 ),
               ),
-              const Spacer(),
+              // (was Spacer: Wrap spaces items instead)
 
               // Media
               GestureDetector(
@@ -1030,7 +1075,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                 cursorColor: _headerColor,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'Add optional notes or evidence reference...',
+                  hintText: tr('Add optional notes or evidence reference...'),
                   hintStyle: TextStyle(
                       color: AppColors.outline.withValues(alpha: 0.6),
                       fontSize: 14),
@@ -1482,7 +1527,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                                 fontWeight: FontWeight.w500)),
                       ],
                       const Spacer(),
-                      Text('Tap to edit',
+                      Text(tr('Tap to edit'),
                           style: TextStyle(
                               fontSize: 11,
                               color: const Color(0xFFF59E0B)
@@ -1577,7 +1622,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: Text('PREVIOUS',
+                    child: Text(tr('PREVIOUS'),
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
@@ -1599,7 +1644,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: Row(
+                    child: FittedBox(fit: BoxFit.scaleDown, child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(isLast ? 'FINISH' : 'SAVE & NEXT',
@@ -1612,7 +1657,7 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                           const Icon(Icons.arrow_forward, size: 18),
                         ],
                       ],
-                    ),
+                    )),
                   ),
                 ),
               ),

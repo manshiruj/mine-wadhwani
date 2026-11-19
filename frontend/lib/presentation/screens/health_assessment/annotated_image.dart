@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // import 'dart:io';
 // import 'package:flutter/material.dart';
 // import 'package:mine_wadhwani/data/models/drone_analysis_result.dart';
@@ -302,12 +303,12 @@ class AnnotatedImage extends StatelessWidget {
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.zoom_in_rounded, color: Colors.white, size: 14),
                       SizedBox(width: 4),
-                      Text('Tap to zoom', style: TextStyle(color: Colors.white, fontSize: 10)),
+                      Text(tr('Tap to zoom'), style: TextStyle(color: Colors.white, fontSize: 10)),
                     ],
                   ),
                 ),

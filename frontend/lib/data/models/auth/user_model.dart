@@ -10,6 +10,7 @@ class UserModel extends UserEntity {
     required super.role,
     super.mineid,
     required super.token,
+    super.accessRole,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
@@ -22,6 +23,9 @@ class UserModel extends UserEntity {
       role: (json['mine_role'] ?? json['role']) as String? ?? '',
       mineid: json['mineid'] as String?,
       token: token ?? '',
+      // Server JSON has the access level in `role`; our cached JSON stores it as `access_role`.
+      accessRole: json['access_role'] as String? ??
+          (json['mine_role'] != null ? json['role'] as String? : null),
     );
   }
 
@@ -35,6 +39,7 @@ class UserModel extends UserEntity {
       'role': role,
       'mineid': mineid,
       'token': token,
+      'access_role': accessRole,
     };
   }
 }

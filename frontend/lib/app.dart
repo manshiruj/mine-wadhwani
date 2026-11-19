@@ -2,6 +2,8 @@
 // import 'package:flutter_bloc/flutter_bloc.dart';
 // import 'package:mine_wadhwani/core/constants/app_constants.dart';
 // import 'package:mine_wadhwani/core/di/injection_container.dart';
+import 'package:mine_wadhwani/core/network/api_client.dart';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // import 'package:mine_wadhwani/core/routing/app_router.dart';
 // import 'package:mine_wadhwani/core/routing/auth_guard.dart';
 // import 'package:mine_wadhwani/core/theme/app_theme.dart';
@@ -76,21 +78,32 @@ class App extends StatefulWidget {
 class _AppState extends State<App> {
   late final AppRouter _appRouter;
 
+  late final AuthBloc _authBloc = sl<AuthBloc>()..add(const AuthCheckRequested());
+
   @override
   void initState() {
     super.initState();
     _appRouter = AppRouter(
       authGuard: AuthGuard(localDataSource: sl<AuthLocalDataSource>()),
     );
+    ApiClient.sessionExpired.addListener(_onSessionExpired);
+  }
+
+  // Server said the saved login is no longer valid: clear it and go to the login screen.
+  void _onSessionExpired() => _authBloc.add(const AuthLogoutRequested());
+
+  @override
+  void dispose() {
+    ApiClient.sessionExpired.removeListener(_onSessionExpired);
+    _authBloc.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
-        ),
+        BlocProvider.value(value: _authBloc),
         // DraftBloc is provided at the root so it's accessible from
         // HomePage, StockpileOverviewPage, and PendingInspectionsScreen
         // without needing to pass it down manually.
@@ -104,11 +117,14 @@ class _AppState extends State<App> {
             _appRouter.replaceAll([const LoginRoute()]);
           }
         },
-        child: MaterialApp.router(
-          title: AppConstants.appName,
-          theme: AppTheme.lightTheme,
-          debugShowCheckedModeBanner: false,
-          routerConfig: _appRouter.config(),
+        child: ValueListenableBuilder<String>(
+          valueListenable: AppLanguage.current,
+          builder: (context, _, __) => MaterialApp.router(
+            title: AppConstants.appName,
+            theme: AppTheme.lightTheme,
+            debugShowCheckedModeBanner: false,
+            routerConfig: _appRouter.config(),
+          ),
         ),
       ),
     );

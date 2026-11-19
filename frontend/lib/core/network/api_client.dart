@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:mine_wadhwani/core/constants/api_constants.dart';
 import 'package:mine_wadhwani/core/error/exceptions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mine_wadhwani/core/constants/app_constants.dart';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 
 class ApiClient {
+  /// Bumped when the server rejects our login token (401); the app then logs out.
+  static final ValueNotifier<int> sessionExpired = ValueNotifier(0);
+
   late final Dio _dio;
   final SharedPreferences _sharedPreferences;
 
@@ -26,9 +31,17 @@ class ApiClient {
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          // Backend writes AI content (handover, actions) in this language.
+          options.headers['Accept-Language'] = AppLanguage.current.value;
           handler.next(options);
         },
         onError: (error, handler) {
+          final req = error.requestOptions;
+          if (error.response?.statusCode == 401 &&
+              req.headers['Authorization'] != null &&
+              !req.path.startsWith('/api/v1/auth/')) {
+            sessionExpired.value++;
+          }
           handler.next(error);
         },
       ),
@@ -52,6 +65,17 @@ class ApiClient {
   }) async {
     try {
       return await _dio.post(path, data: data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<Response> patch(
+    String path, {
+    dynamic data,
+  }) async {
+    try {
+      return await _dio.patch(path, data: data);
     } on DioException catch (e) {
       throw _handleError(e);
     }

@@ -1,3 +1,7 @@
+import 'package:mine_wadhwani/core/di/injection_container.dart';
+import 'package:mine_wadhwani/core/error/failures.dart';
+import 'package:mine_wadhwani/core/network/outbox.dart';
+import 'package:mine_wadhwani/data/datasources/checklist/checklist_remote_datasource.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -231,6 +235,38 @@ class ChecklistBloc extends Bloc<ChecklistEvent, ChecklistState> {
 
       await result.fold(
         (failure) async {
+          // Offline: keep the inspection on the device and sync it later.
+          if (failure is ServerFailure && failure.statusCode == null) {
+            final images = <int, List<String>>{};
+            for (final e in pendingImages.entries) {
+              final idx = questions.indexWhere((q) => q.questionCode == e.key);
+              if (idx != -1 && e.value.isNotEmpty) {
+                images[idx] = e.value.map((i) => i.filePath).toList();
+              }
+            }
+            await sl<Outbox>().add(
+              '/api/v1/forms-data/save-data',
+              buildSubmitPayload(
+                supervisorId: event.supervisorId,
+                mineName: event.mineName,
+                mineType: event.mineType,
+                area: event.area,
+                shift: event.shift,
+                inspectionType: event.inspectionType,
+                checklistData: questions,
+                date: now,
+                startTime: startTime,
+                endTime: now,
+                completed: event.completed,
+                observations: event.observations,
+                signature: event.signature,
+              ),
+              images: images,
+            );
+            _clearProgress();
+            emit(const ChecklistSubmitted(queued: true));
+            return;
+          }
           emit(ChecklistError(message: failure.message));
           emit(ChecklistLoaded(
             questions: questions,

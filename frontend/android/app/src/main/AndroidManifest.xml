@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     
     <application
@@ -46,6 +47,7 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+<<<<<<< HEAD
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
@@ -53,6 +55,11 @@
         <intent>
             <action android:name="android.intent.action.DIAL" />
             <data android:scheme="tel" />
+=======
+        <!-- speech_to_text (voice checklist fill) -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+>>>>>>> 60bdb660e42d0e9da8d7df9dbc11d62bf5e4f9fa
         </intent>
     </queries>
 <!-- 

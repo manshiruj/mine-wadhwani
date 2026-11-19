@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // import 'package:auto_route/auto_route.dart';
 // import 'package:flutter/material.dart';
 // import 'package:mine_wadhwani/core/routing/app_router.gr.dart';
@@ -108,13 +109,13 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
             Icon(Icons.lock_rounded, color: Colors.white, size: 16),
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Tap "View mine info" above to unlock.',
+                tr('Tap "View mine info" above to unlock.'),
                 style: TextStyle(fontSize: 13),
               ),
             ),
@@ -263,16 +264,16 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
           children: [
             _buildSectionHeader(
               icon: Icons.access_time_rounded,
-              title: 'Shift & Inspection',
-              subtitle: 'Select shift and type of inspection',
+              title: tr('Shift & Inspection'),
+              subtitle: tr('Select shift and type of inspection'),
             ),
             const SizedBox(height: 16),
             if (!_mineInfoReviewed) _buildLockBanner(),
             const SizedBox(height: 8),
             Opacity(
               opacity: _mineInfoReviewed ? 1.0 : 0.38,
-              child: const Text(
-                'SHIFT',
+              child: Text(
+                tr('SHIFT'),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -285,7 +286,7 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
             _buildShiftRow(),
             const SizedBox(height: 20),
             _buildLockedDropdownCard(
-              label: 'Inspection Area',
+              label: tr('Inspection Area'),
               hint: 'Select inspection area',
               icon: Icons.assignment_rounded,
               value: _selectedInspectionType,
@@ -310,13 +311,13 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
         border: Border.all(color: const Color(0xFFFFCC02), width: 1),
       ),
       child: Row(
-        children: const [
+        children: [
           Icon(Icons.lock_outline_rounded,
               size: 18, color: Color(0xFFF59E0B)),
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Review mine information above to unlock shift & inspection selection.',
+              tr('Review mine information above to unlock shift & inspection selection.'),
               style: TextStyle(
                 fontSize: 12,
                 color: Color(0xFF92400E),
@@ -378,7 +379,7 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          shift['label'],
+                          tr(shift['label'] as String),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -453,11 +454,11 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
           ),
           elevation: 0,
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Next',
+              tr('Next'),
               style:
                   TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
@@ -478,11 +479,11 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
         icon: const Icon(Icons.arrow_back_ios_rounded),
         onPressed: () => context.router.maybePop(),
       ),
-      title: const Column(
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Start Inspection',
+            tr('Start Inspection'),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -490,7 +491,7 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
             ),
           ),
           Text(
-            'Step 2 of 2',
+            tr('Step 2 of 2'),
             style: TextStyle(fontSize: 11, color: Colors.white60),
           ),
         ],
@@ -532,8 +533,8 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'SELECTED DETAILS',
+          Text(
+            tr('SELECTED DETAILS'),
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -630,7 +631,7 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
           child: Icon(icon, color: navyBlue, size: 22),
         ),
         const SizedBox(width: 12),
-        Column(
+        Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
@@ -642,7 +643,7 @@ class _ShiftSelectionPageState extends State<ShiftSelectionPage>
             Text(subtitle,
                 style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           ],
-        ),
+        )),
       ],
     );
   }
