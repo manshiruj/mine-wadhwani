@@ -57,3 +57,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Secrets
+.env
+info.txt
+UserDeviceNewApis-AccessDocument.docx
+# ML training virtualenv
+backend/ml/.venv/

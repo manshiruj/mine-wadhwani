@@ -86,6 +86,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mine_wadhwani/core/network/api_client.dart';
+import 'package:mine_wadhwani/core/network/outbox.dart';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'package:mine_wadhwani/data/datasources/auth/auth_local_datasource.dart';
 import 'package:mine_wadhwani/data/datasources/auth/auth_remote_datasource.dart';
 import 'package:mine_wadhwani/data/datasources/checklist/checklist_remote_datasource.dart';
@@ -111,6 +113,8 @@ Future<void> init() async {
   sl.registerLazySingleton<ApiClient>(
     () => ApiClient(sharedPreferences: sl()),
   );
+  sl.registerLazySingleton<Outbox>(() => Outbox(prefs: sl(), api: sl()));
+  AppLanguage.load(sharedPreferences);
 
   // ── Data Sources ───────────────────────────────────────
   sl.registerLazySingleton<AuthRemoteDataSource>(

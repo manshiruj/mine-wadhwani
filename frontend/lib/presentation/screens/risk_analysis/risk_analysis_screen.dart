@@ -1,3 +1,5 @@
+import 'package:mine_wadhwani/presentation/screens/agent/risk_monitor_screen.dart';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // import 'dart:math';
 // import 'package:flutter/material.dart';
 
@@ -1238,17 +1240,18 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                     color: primary, borderRadius: BorderRadius.circular(4)),
               ),
               const SizedBox(width: 12),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Stockpile Risk Analysis',
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(tr('Stockpile Risk Analysis'),
                     style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
                         color: primary,
                         height: 1.1)),
-                Text('Enter sensor readings to compute spontaneous heating risk index',
+                Text(tr('Enter sensor readings to compute spontaneous heating risk index'),
                     style: TextStyle(fontSize: 10, color: Colors.grey[500])),
-              ]),
-              const Spacer(),
+              ])),
+              // Formula chip only where there is room (tablets / landscape).
+              if (MediaQuery.sizeOf(context).width >= 760)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                 decoration: BoxDecoration(
@@ -1256,10 +1259,10 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: primary.withValues(alpha: 0.2)),
                 ),
-                child: const Row(children: [
+                child: Row(children: [
                   Icon(Icons.functions_rounded, color: primary, size: 13),
                   SizedBox(width: 5),
-                  Text('Risk ∝ 1/Grade + f(T, RH, O₂, CO, Fines)',
+                  Text(tr('Risk ∝ 1/Grade + f(T, RH, O₂, CO, Fines)'),
                       style: TextStyle(
                           fontSize: 10,
                           color: primary,
@@ -1270,19 +1273,32 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
             ]),
           ),
 
-          // ── Main content — NO scroll ──────────────────────────────────────
+          // ── Main content — side by side on tablets, scrolls on phones ─────
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: LayoutBuilder(builder: (context, box) {
+              if (box.maxWidth >= 760) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(width: 300, child: _buildInputForm()),
+                      const SizedBox(width: 18),
+                      Expanded(child: _buildRightPanel()),
+                    ],
+                  ),
+                );
+              }
+              // Panels use flex children internally, so give them fixed heights here.
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                 children: [
-                  SizedBox(width: 300, child: _buildInputForm()),
-                  const SizedBox(width: 18),
-                  Expanded(child: _buildRightPanel()),
+                  SizedBox(height: 620, child: _buildInputForm()),
+                  const SizedBox(height: 16),
+                  SizedBox(height: 760, child: _buildRightPanel()),
                 ],
-              ),
-            ),
+              );
+            }),
           ),
         ],
       ),
@@ -1307,26 +1323,44 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
           const SizedBox(width: 14),
           Container(width: 1, height: 28, color: Colors.white24),
           const SizedBox(width: 14),
-          const Text('Risk Analysis',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700)),
+          Flexible(
+            child: Text(tr('Risk Analysis'),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700)),
+          ),
           const Spacer(),
-          Container(
+          // Continuous AI monitoring (ML + rules + forecast + LLM) lives in the Risk Monitor agent.
+          if (MediaQuery.sizeOf(context).width < 700)
+            IconButton(
+              tooltip: tr('open_monitor'),
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RiskMonitorScreen())),
+              icon: const Icon(Icons.sensors, color: Colors.white, size: 20),
+            )
+          else
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RiskMonitorScreen())),
+              icon: const Icon(Icons.sensors, color: Colors.white, size: 16),
+              label: Text(tr('open_monitor'), style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ),
+          Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white12,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white24, width: 0.8),
             ),
-            child: const Row(children: [
+            child: Row(children: [
               Icon(Icons.query_stats_rounded, color: Colors.white70, size: 13),
               SizedBox(width: 6),
-              Text('Spontaneous Heating Index',
+              Text(tr('Spontaneous Heating Index'),
                   style: TextStyle(color: Colors.white70, fontSize: 11)),
             ]),
-          ),
+          ))),
         ]),
       ),
     );
@@ -1363,7 +1397,7 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                 child: const Icon(Icons.sensors_rounded, color: primary, size: 13),
               ),
               const SizedBox(width: 8),
-              const Text('Sensor Parameters',
+              Text(tr('Sensor Parameters'),
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12,
                       color: Color(0xFF1A1A2E))),
             ]),
@@ -1376,19 +1410,19 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
               child: Column(children: [
                 _buildGradeDropdown(),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _tempController,  label: 'Temperature',          unit: '°C',  hint: '25–60',  icon: Icons.thermostat_rounded,  iconColor: const Color(0xFFE53935),
+                _buildInputField(controller: _tempController,  label: tr('Temperature'),          unit: '°C',  hint: '25–60',  icon: Icons.thermostat_rounded,  iconColor: const Color(0xFFE53935),
                   validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < -10 || val > 100) return '–10 to 100'; return null; }),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _rhController,    label: 'Relative Humidity',    unit: '%',   hint: '0–100',  icon: Icons.water_drop_rounded,  iconColor: const Color(0xFF1E88E5),
+                _buildInputField(controller: _rhController,    label: tr('Relative Humidity'),    unit: '%',   hint: '0–100',  icon: Icons.water_drop_rounded,  iconColor: const Color(0xFF1E88E5),
                   validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < 0 || val > 100) return '0–100'; return null; }),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _o2Controller,    label: 'Oxygen (O₂)',          unit: '%',   hint: '0–21',   icon: Icons.air_rounded,         iconColor: const Color(0xFF43A047),
+                _buildInputField(controller: _o2Controller,    label: tr('Oxygen (O₂)'),          unit: '%',   hint: '0–21',   icon: Icons.air_rounded,         iconColor: const Color(0xFF43A047),
                   validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < 0 || val > 21) return '0–21'; return null; }),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _coController,    label: 'Carbon Monoxide (CO)', unit: 'ppb', hint: '0–500',  icon: Icons.cloud_rounded,       iconColor: const Color(0xFF6D4C41),
+                _buildInputField(controller: _coController,    label: tr('Carbon Monoxide (CO)'), unit: 'ppb', hint: '0–500',  icon: Icons.cloud_rounded,       iconColor: const Color(0xFF6D4C41),
                   validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < 0) return '≥ 0'; return null; }),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _finesController, label: 'Coal Fines',           unit: '%',   hint: '0–100',  icon: Icons.grain_rounded,       iconColor: const Color(0xFF8D6E63),
+                _buildInputField(controller: _finesController, label: tr('Coal Fines'),           unit: '%',   hint: '0–100',  icon: Icons.grain_rounded,       iconColor: const Color(0xFF8D6E63),
                   validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < 0 || val > 100) return '0–100'; return null; }),
                 const Spacer(),
                 SizedBox(
@@ -1425,7 +1459,7 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
           decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(5)),
           child: const Icon(Icons.layers_rounded, color: Color(0xFFEF6C00), size: 12)),
         const SizedBox(width: 7),
-        const Text('Coal Grade', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+        Text(tr('Coal Grade'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
       ]),
       const SizedBox(height: 4),
       DropdownButtonFormField<String>(
@@ -1463,7 +1497,7 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
           decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(5)),
           child: Icon(icon, color: iconColor, size: 12)),
         const SizedBox(width: 7),
-        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+        Flexible(child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)))),
       ]),
       const SizedBox(height: 4),
       TextFormField(
@@ -1514,7 +1548,7 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                   decoration: BoxDecoration(color: const Color(0xFFFFE5E5), borderRadius: BorderRadius.circular(6)),
                   child: const Icon(Icons.speed_rounded, color: Color(0xFFD32F2F), size: 13)),
                 const SizedBox(width: 8),
-                const Text('Riskometer', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF1A1A2E))),
+                Text(tr('Riskometer'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF1A1A2E))),
                 const Spacer(),
                 if (_analysed)
                   Container(
@@ -1599,7 +1633,7 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
           Row(children: [
             Text(level.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: level.color)),
             const SizedBox(width: 5),
-            Text('Risk', style: TextStyle(fontSize: 12, color: level.color.withValues(alpha: 0.7))),
+            Text(tr('Risk'), style: TextStyle(fontSize: 12, color: level.color.withValues(alpha: 0.7))),
           ]),
           const SizedBox(height: 2),
           Text(level.description,
@@ -1618,8 +1652,8 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
       child: Row(children: [
         Icon(Icons.info_outline_rounded, color: Colors.grey[300], size: 20),
         const SizedBox(width: 10),
-        Text('Enter values and tap Analyse Risk to see results',
-            style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+        Expanded(child: Text(tr('Enter values and tap Analyse Risk to see results'),
+            style: TextStyle(fontSize: 11, color: Colors.grey[400]))),
       ]),
     );
   }
@@ -1661,7 +1695,7 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
               decoration: BoxDecoration(color: const Color(0xFFE8F0FB), borderRadius: BorderRadius.circular(6)),
               child: const Icon(Icons.bar_chart_rounded, color: primary, size: 13)),
             const SizedBox(width: 8),
-            const Text('Risk Factor Breakdown',
+            Text(tr('Risk Factor Breakdown'),
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF1A1A2E))),
           ]),
         ),

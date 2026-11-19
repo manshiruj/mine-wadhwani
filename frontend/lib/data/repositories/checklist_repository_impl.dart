@@ -16,7 +16,7 @@ class ChecklistRepositoryImpl implements ChecklistRepository {
       final checklist = await remoteDataSource.fetchChecklist();
       return Right(checklist);
     } on ServerException catch (e) {
-      return Left(ServerFailure(message: e.message));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     }
   }
 
@@ -54,7 +54,7 @@ class ChecklistRepositoryImpl implements ChecklistRepository {
       );
       return Right(inspectionId);
     } on ServerException catch (e) {
-      return Left(ServerFailure(message: e.message));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     }
   }
 
@@ -72,7 +72,7 @@ class ChecklistRepositoryImpl implements ChecklistRepository {
       );
       return Right(urls);
     } on ServerException catch (e) {
-      return Left(ServerFailure(message: e.message));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     }
   }
 
@@ -94,7 +94,7 @@ class ChecklistRepositoryImpl implements ChecklistRepository {
       );
       return Right(data);
     } on ServerException catch (e) {
-      return Left(ServerFailure(message: e.message));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     }
   }
 }

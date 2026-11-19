@@ -10,7 +10,9 @@ abstract class Failure extends Equatable {
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure({required super.message});
+  /// null when the request never got an HTTP response (offline / network error).
+  final int? statusCode;
+  const ServerFailure({required super.message, this.statusCode});
 }
 
 class CacheFailure extends Failure {

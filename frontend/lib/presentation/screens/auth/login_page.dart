@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // import 'package:auto_route/auto_route.dart';
 // import 'package:flutter/material.dart';
 // import 'package:flutter_bloc/flutter_bloc.dart';
@@ -298,8 +299,8 @@ class _LoginPageState extends State<LoginPage> {
                         ],
                       ),
                       const Spacer(),
-                      const Text(
-                        'AI-Enabled Mine\nInspection & Safety',
+                      Text(
+                        tr('AI-Enabled Mine\nInspection & Safety'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 40,
@@ -308,8 +309,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Health & Safety monitoring with intelligent\nrisk indices for every mine site.',
+                      Text(
+                        tr('Health & Safety monitoring with intelligent\nrisk indices for every mine site.'),
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 15,
@@ -390,8 +391,8 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Mine Safety,\nPowered by AI.',
+                Text(
+                  tr('Mine Safety,\nPowered by AI.'),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -417,8 +418,8 @@ class _LoginPageState extends State<LoginPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Welcome Back!',
+          Text(
+            tr('Welcome Back!'),
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w800,
@@ -426,8 +427,8 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Sign in to your account to continue',
+          Text(
+            tr('Sign in to your account to continue'),
             style: TextStyle(fontSize: 14, color: Color(0xFF6B7A99)),
           ),
           const SizedBox(height: 36),
@@ -505,8 +506,8 @@ class _LoginPageState extends State<LoginPage> {
                         strokeWidth: 2,
                       ),
                     )
-                  : const Text(
-                      'Log In',
+                  : Text(
+                      tr('Log In'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -525,7 +526,7 @@ class _LoginPageState extends State<LoginPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  'or',
+                  tr('or'),
                   style: TextStyle(color: Colors.grey[400], fontSize: 13),
                 ),
               ),
@@ -548,8 +549,8 @@ class _LoginPageState extends State<LoginPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
-                'Create an Account',
+              child: Text(
+                tr('Create an Account'),
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
             ),
@@ -559,7 +560,7 @@ class _LoginPageState extends State<LoginPage> {
 
           Center(
             child: Text(
-              '© 2026 AIMSURE. All rights reserved.',
+              tr('© 2026 AIMSURE. All rights reserved.'),
               style: TextStyle(fontSize: 11, color: Colors.grey[400]),
             ),
           ),

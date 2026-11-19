@@ -85,21 +85,21 @@ class ChecklistRemoteDataSourceImpl implements ChecklistRemoteDataSource {
     String signature = '',
   }) async {
     try {
-      final payload = {
-        'mine_name': mineName,
-        'mine_type': mineType,
-        'area': area,
-        'shift': shift,
-        'Inspection_type': inspectionType,
-        'Inspector_id': supervisorId,
-        'checklistData': checklistData.map((e) => e.toJson()).toList(),
-        'date': date,
-        'startTime': startTime,
-        'endTime': endTime,
-        'completed': completed,
-        'observations': observations,
-        'signature': signature,
-      };
+      final payload = buildSubmitPayload(
+        supervisorId: supervisorId,
+        mineName: mineName,
+        mineType: mineType,
+        area: area,
+        shift: shift,
+        inspectionType: inspectionType,
+        checklistData: checklistData,
+        date: date,
+        startTime: startTime,
+        endTime: endTime,
+        completed: completed,
+        observations: observations,
+        signature: signature,
+      );
       debugPrint('SUBMIT PAYLOAD: $payload');
       final response = await apiClient.post(
         '/api/v1/forms-data/save-data',
@@ -197,3 +197,35 @@ class ChecklistRemoteDataSourceImpl implements ChecklistRemoteDataSource {
     }
   }
 }
+
+/// Body for POST /api/v1/forms-data/save-data (shared with the offline outbox).
+Map<String, dynamic> buildSubmitPayload({
+  required String supervisorId,
+  required String mineName,
+  required String mineType,
+  required String area,
+  required int shift,
+  required String inspectionType,
+  required List<ChecklistModel> checklistData,
+  required String date,
+  required String startTime,
+  required String endTime,
+  required bool completed,
+  String observations = '',
+  String signature = '',
+}) =>
+    {
+      'mine_name': mineName,
+      'mine_type': mineType,
+      'area': area,
+      'shift': shift,
+      'Inspection_type': inspectionType,
+      'Inspector_id': supervisorId,
+      'checklistData': checklistData.map((e) => e.toJson()).toList(),
+      'date': date,
+      'startTime': startTime,
+      'endTime': endTime,
+      'completed': completed,
+      'observations': observations,
+      'signature': signature,
+    };

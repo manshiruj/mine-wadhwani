@@ -1,87 +1,130 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:mine_wadhwani/core/di/injection_container.dart';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
+import 'package:mine_wadhwani/core/network/api_client.dart';
+import 'package:mine_wadhwani/presentation/screens/agent/agent_widgets.dart';
 
-class NotificationScreen extends StatelessWidget {
+/// In-app alerts: critical findings, overdue/escalated actions, PPE and AQM flags.
+class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
 
-  static const Color primary = Color(0xFF1F579C);
+  @override
+  State<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends State<NotificationScreen> {
+  Key _listKey = UniqueKey();
+
+  Future<List<Map<String, dynamic>>> _load() async {
+    final res = await sl<ApiClient>().get('/api/v1/alerts');
+    return dataList(res.data);
+  }
+
+  Future<void> _markAllRead() async {
+    await sl<ApiClient>().post('/api/v1/alerts/read', data: {});
+    setState(() => _listKey = UniqueKey());
+  }
+
+  IconData _icon(String? type) => switch (type) {
+        'overdue_action' => Icons.schedule,
+        'ppe' => Icons.engineering,
+        'aqm' => Icons.air,
+        _ => Icons.warning_amber_rounded,
+      };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-
-      // 🔹 App Bar (Clean, same as your app theme)
-      appBar: AppBar(
-        backgroundColor: primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Notifications",
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-            color: Colors.white,
-          ),
-        ),
+      backgroundColor: kBg,
+      appBar: agentAppBar(tr('alerts'), actions: [
+        TextButton(
+            onPressed: _markAllRead,
+            child: Text(tr('mark_all_read'), style: const TextStyle(color: Colors.white))),
+      ]),
+      body: ApiListView<Map<String, dynamic>>(
+        key: _listKey,
+        load: _load,
+        emptyIcon: Icons.notifications_none_rounded,
+        itemBuilder: (c, a, _) {
+          final color = severityColor(a['severity'] as String?);
+          return Container(
+            padding: const EdgeInsets.all(14),
+            decoration: cardDecoration(color),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.12),
+                  child: Icon(_icon(a['type'] as String?), color: color)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(
+                        child: Text(a['title'] as String? ?? '',
+                            style: TextStyle(
+                                fontWeight: a['read'] == true ? FontWeight.w500 : FontWeight.w800))),
+                    if (a['read'] != true) const CircleAvatar(radius: 4, backgroundColor: Colors.red),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(a['message'] as String? ?? '', style: const TextStyle(fontSize: 13)),
+                  const SizedBox(height: 4),
+                  Text('${a['mine_name']} · ${fmtDateTime(a['createdAt'] as String?)}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ]),
+              ),
+            ]),
+          );
+        },
       ),
-
-      // 🔹 Body
-      body: _buildEmptyState(), // static for now
     );
   }
+}
 
-  // 🔹 Empty State UI (like your screenshot)
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Bell Icon
-          Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: primary.withOpacity(0.08),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.notifications_none_rounded,
-              size: 50,
-              color: primary,
-            ),
-          ),
+/// Home-bar bell with unread alert count (polls every minute).
+class UnreadAlertsBell extends StatefulWidget {
+  const UnreadAlertsBell({super.key});
 
-          const SizedBox(height: 20),
+  @override
+  State<UnreadAlertsBell> createState() => _UnreadAlertsBellState();
+}
 
-          // Title
-          const Text(
-            "You're all caught up",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
-          ),
+class _UnreadAlertsBellState extends State<UnreadAlertsBell> {
+  int _unread = 0;
+  Timer? _timer;
 
-          const SizedBox(height: 8),
+  @override
+  void initState() {
+    super.initState();
+    _poll();
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) => _poll());
+  }
 
-          // Subtitle
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              "We'll notify you when inspections, hazards, or approvals require your attention.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _poll() async {
+    try {
+      final res = await sl<ApiClient>().get('/api/v1/alerts');
+      final n = dataList(res.data).where((a) => a['read'] != true).length;
+      if (mounted) setState(() => _unread = n);
+    } catch (_) {} // offline: keep last count
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tr('alerts'),
+      onPressed: () async {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
+        _poll();
+      },
+      icon: Badge(
+        isLabelVisible: _unread > 0,
+        label: Text('$_unread'),
+        child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
       ),
     );
   }

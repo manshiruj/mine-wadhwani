@@ -59,6 +59,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
         role: (userJson['mine_role'] ?? userJson['role']) as String? ?? '',
         mineid: userJson['mineid'] as String?,
         token: userJson['token'] as String? ?? '',
+        accessRole: userJson['access_role'] as String?,
       );
     } catch (e) {
       throw CacheException(message: 'Failed to parse cached user');

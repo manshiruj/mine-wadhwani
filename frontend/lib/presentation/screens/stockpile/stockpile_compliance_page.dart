@@ -1,3 +1,5 @@
+import 'package:mine_wadhwani/core/widgets/responsive_panels.dart';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // import 'dart:convert';
 
 // import 'package:flutter/material.dart';
@@ -859,11 +861,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
   void initState() {
     super.initState();
     _nameController.text = widget.inspectorName;
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: _headerColor,
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
@@ -1038,16 +1036,17 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
               builder: (dialogContext) => AlertDialog(
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
-                title: const Row(
+                title: Row(
                   children: [
                     Icon(Icons.check_circle_outline,
                         color: Color(0xFF10B981), size: 24),
                     SizedBox(width: 10),
-                    Text('Inspection Submitted'),
+                    Text(tr('Inspection Submitted')),
                   ],
                 ),
-                content: const Text(
-                    'The inspection has been submitted and saved successfully.'),
+                content: Text(state.queued
+                    ? tr('queued_offline')
+                    : 'The inspection has been submitted and saved successfully.'),
                 actions: [
                   FilledButton(
                     onPressed: () {
@@ -1057,7 +1056,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
                     },
                     style: FilledButton.styleFrom(
                         backgroundColor: _headerColor),
-                    child: const Text('Done'),
+                    child: Text(tr('Done')),
                   ),
                 ],
               ),
@@ -1080,16 +1079,8 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
               children: [
                 _buildHeader(statusBarHeight),
                 Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Left panel — Observations + Name
-                      Expanded(
-                        flex: 5,
-                        child: SingleChildScrollView(
-                          padding:
-                              const EdgeInsets.fromLTRB(24, 20, 12, 20),
-                          child: Column(
+                  child: ResponsivePanels(
+  left: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildSectionLabel('GENERAL OBSERVATIONS',
@@ -1102,15 +1093,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
                               _buildNameField(),
                             ],
                           ),
-                        ),
-                      ),
-                      // Right panel — Signature
-                      Expanded(
-                        flex: 5,
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(12, 20, 24, 20),
-                          child: Column(
+  right: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildSectionLabel('SIGNATURE'),
@@ -1123,10 +1106,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
                               _buildSignatureFooter(),
                             ],
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
+),
                 ),
                 _buildFooter(context, isSubmitting),
               ],
@@ -1211,7 +1191,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Sign here',
+                        tr('Sign here'),
                         style: TextStyle(
                           fontSize: 13,
                           color: AppColors.outline.withValues(alpha: 0.4),
@@ -1231,7 +1211,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
+        Flexible(child: Text(
           _signatureEmpty
               ? 'Draw your signature above'
               : 'Signature captured ✓',
@@ -1242,7 +1222,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
                 : const Color(0xFF10B981),
             fontWeight: FontWeight.w500,
           ),
-        ),
+        )),
         TextButton.icon(
           onPressed: () {
             setState(() {
@@ -1252,7 +1232,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
             });
           },
           icon: const Icon(Icons.refresh, size: 14),
-          label: const Text('Clear'),
+          label: Text(tr('Clear')),
           style: TextButton.styleFrom(
             foregroundColor: AppColors.secondary,
             padding:
@@ -1295,7 +1275,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Complete Inspection',
+                        tr('Complete Inspection'),
                         style: AppTextStyles.headlineMedium.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -1304,7 +1284,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Sign off before submitting or previewing',
+                        tr('Sign off before submitting or previewing'),
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: Colors.white.withValues(alpha: 0.75),
                           fontSize: 13,
@@ -1401,7 +1381,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
         cursorColor: _headerColor,
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
-          hintText: 'Full name of inspector',
+          hintText: tr('Full name of inspector'),
           prefixIcon: const Icon(Icons.person_outline,
               color: _headerColor, size: 20),
           filled: true,
@@ -1443,8 +1423,8 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
                       onPressed: _canSubmit ? _openPreview : null,
                       icon: const Icon(Icons.visibility_outlined,
                           size: 18),
-                      label: const Text(
-                        'Preview & Export',
+                      label: Text(
+                        tr('Preview & Export'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -1522,7 +1502,7 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
   Widget _buildSectionLabel(String label, {bool optional = false}) {
     return Row(
       children: [
-        Text(
+        Flexible(child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
@@ -1530,11 +1510,11 @@ class _StockpileCompliancePageState extends State<StockpileCompliancePage> {
             color: AppColors.secondary.withValues(alpha: 0.7),
             letterSpacing: 1.0,
           ),
-        ),
+        )),
         if (optional) ...[
           const SizedBox(width: 6),
           Text(
-            '(optional)',
+            tr('(optional)'),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w400,

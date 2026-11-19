@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // lib/presentation/screens/common/inspection_report_preview_page.dart
 //
 // Generic PDF preview & export page used by ALL inspection types.
@@ -71,11 +72,7 @@ class _InspectionReportPreviewPageState
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: _headerColor,
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
@@ -993,7 +990,7 @@ class _InspectionReportPreviewPageState
                                             fontWeight: FontWeight.w800,
                                             color: Color(0xFF1A2340))),
                                     const SizedBox(height: 3),
-                                    Text('Inspection Report',
+                                    Text(tr('Inspection Report'),
                                         style: TextStyle(
                                             fontSize: 13,
                                             color: AppColors.secondary
@@ -1008,7 +1005,7 @@ class _InspectionReportPreviewPageState
                                   color: const Color(0xFFD1FAE5),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: const Text('Complete',
+                                child: Text(tr('Complete'),
                                     style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -1052,7 +1049,7 @@ class _InspectionReportPreviewPageState
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text('Conducted on',
+                                      Text(tr('Conducted on'),
                                           style: TextStyle(
                                               fontSize: 11,
                                               color: AppColors.secondary
@@ -1076,7 +1073,7 @@ class _InspectionReportPreviewPageState
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text('Evaluator',
+                                      Text(tr('Evaluator'),
                                           style: TextStyle(
                                               fontSize: 11,
                                               color: AppColors.secondary
@@ -1121,7 +1118,7 @@ class _InspectionReportPreviewPageState
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFFE0E3EA)),
                       ),
-                      child: Text('Not conducted this shift',
+                      child: Text(tr('Not conducted this shift'),
                           style: TextStyle(fontSize: 13, color: AppColors.secondary.withValues(alpha: 0.6))),
                     ),
                   ],
@@ -1187,14 +1184,14 @@ class _InspectionReportPreviewPageState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Report Preview',
+                      Text(tr('Report Preview'),
                           style: AppTextStyles.headlineMedium.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
                             fontSize: 22,
                           )),
                       const SizedBox(height: 2),
-                      Text('Read-only — download or share below',
+                      Text(tr('Read-only — download or share below'),
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: Colors.white.withValues(alpha: 0.75),
                             fontSize: 13,
@@ -1333,21 +1330,21 @@ class _InspectionReportPreviewPageState
               style: TextStyle(fontSize: 12, color: AppColors.secondary.withValues(alpha: 0.6))),
           if (ha.aqmReadings.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Text('AQM READING',
+            Text(tr('AQM READING'),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F579C), letterSpacing: 0.5)),
             const SizedBox(height: 6),
             ...ha.aqmReadings.entries.map((e) => _healthRow(e.key, e.value, ha.aqmFlagged)),
           ],
           if (ha.droneReadings.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Text('DRONE SWEEP',
+            Text(tr('DRONE SWEEP'),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F579C), letterSpacing: 0.5)),
             const SizedBox(height: 6),
             ...ha.droneReadings.entries.map((e) => _healthRow(e.key, e.value, false)),
           ],
           if (ha.workerReadings.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Text('SMARTWATCH SPOT-CHECK',
+            Text(tr('SMARTWATCH SPOT-CHECK'),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F579C), letterSpacing: 0.5)),
             const SizedBox(height: 6),
             ...ha.workerReadings.map((w) => Padding(
@@ -1373,7 +1370,7 @@ class _InspectionReportPreviewPageState
           ],
           if (ha.notes.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Text('NOTES',
+            Text(tr('NOTES'),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F579C), letterSpacing: 0.5)),
             const SizedBox(height: 6),
             Text(ha.notes, style: const TextStyle(fontSize: 13, color: Color(0xFF374151))),
@@ -1418,11 +1415,11 @@ class _InspectionReportPreviewPageState
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Flagged items',
+              Flexible(child: Text(tr('Flagged items'),
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF991B1B))),
+                      color: Color(0xFF991B1B)))),
               Text('$_flaggedCount flagged',
                   style: const TextStyle(
                       fontSize: 12, color: Color(0xFF991B1B))),
@@ -1465,7 +1462,7 @@ class _InspectionReportPreviewPageState
                           color: const Color(0xFFEF4444),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text('NO',
+                        child: Text(tr('NO'),
                             style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -1493,7 +1490,7 @@ class _InspectionReportPreviewPageState
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Actions',
+              Text(tr('Actions'),
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1648,7 +1645,7 @@ class _InspectionReportPreviewPageState
             color: const Color(0xFFEFF6FF),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Text('CHECKLIST SUMMARY/AUDIT',
+          child: Text(tr('CHECKLIST SUMMARY/AUDIT'),
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1857,7 +1854,7 @@ class _InspectionReportPreviewPageState
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: _headerColor))
                           : const Icon(Icons.download_outlined, size: 18),
-                      label: const Text('Download',
+                      label: Text(tr('Download'),
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -1879,7 +1876,7 @@ class _InspectionReportPreviewPageState
                     child: FilledButton.icon(
                       onPressed: _isGenerating ? null : _sharePdf,
                       icon: const Icon(Icons.share_outlined, size: 18),
-                      label: const Text('Share',
+                      label: Text(tr('Share'),
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,

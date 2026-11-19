@@ -1,3 +1,5 @@
+import 'package:mine_wadhwani/presentation/screens/health_assessment/ai_health_card.dart';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
@@ -6,11 +8,15 @@ class RiskSummarySheet extends StatefulWidget {
   final int totalChecks;
   final List<String> flagDetails;
 
+  /// Result of the AI Health Manager agent (optional).
+  final Future<Map<String, dynamic>>? aiAssessment;
+
   const RiskSummarySheet({
     super.key,
     required this.flagCount,
     required this.totalChecks,
     required this.flagDetails,
+    this.aiAssessment,
   });
 
   static Future<void> show(
@@ -18,6 +24,7 @@ class RiskSummarySheet extends StatefulWidget {
     required int flagCount,
     required int totalChecks,
     required List<String> flagDetails,
+    Future<Map<String, dynamic>>? aiAssessment,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -27,6 +34,7 @@ class RiskSummarySheet extends StatefulWidget {
         flagCount: flagCount,
         totalChecks: totalChecks,
         flagDetails: flagDetails,
+        aiAssessment: aiAssessment,
       ),
     );
   }
@@ -94,7 +102,7 @@ class _RiskSummarySheetState extends State<RiskSummarySheet>
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: SafeArea(
         top: false,
-        child: Column(
+        child: SingleChildScrollView(child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -106,13 +114,13 @@ class _RiskSummarySheetState extends State<RiskSummarySheet>
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Health Risk Summary',
+            Text(
+              tr('Health Risk Summary'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A2340)),
             ),
             const SizedBox(height: 4),
             Text(
-              'Based on readings entered for this shift',
+              tr('Based on readings entered for this shift'),
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
             const SizedBox(height: 28),
@@ -132,6 +140,7 @@ class _RiskSummarySheetState extends State<RiskSummarySheet>
                   ],
                 ),
               ),
+              if (widget.aiAssessment != null) AiHealthCard(assessment: widget.aiAssessment!),
             ],
             SizedBox(
               width: double.infinity,
@@ -144,11 +153,11 @@ class _RiskSummarySheetState extends State<RiskSummarySheet>
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                   elevation: 0,
                 ),
-                child: const Text('Continue', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                child: Text(tr('Continue'), style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
-        ),
+        )),
       ),
     );
   }
@@ -175,7 +184,7 @@ class _RiskSummarySheetState extends State<RiskSummarySheet>
             ),
           ),
           const SizedBox(height: 16),
-          Text('Analyzing readings...',
+          Text(tr('Analyzing readings...'),
               style: TextStyle(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w500)),
         ],
       ),

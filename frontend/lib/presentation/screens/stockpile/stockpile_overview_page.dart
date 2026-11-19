@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -75,12 +77,17 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
   /// Stable draft ID — reused on every "Save Draft" press so that we
   /// overwrite the same record instead of creating duplicates.
   late final String _draftId;
+  late final DraftBloc _draftBloc;
+  bool _autoSaving = false; // background save: don't show the "Draft saved" snackbar
+  bool _completing = false; // submit screen is open; skip auto-save if it closes this page
+  String? _lastSavedSig;
 
   static const _headerColor = Color(0xFF1F579C);
 
   @override
   void initState() {
     super.initState();
+    _draftBloc = context.read<DraftBloc>();
 
     // Re-use the incoming draft id or mint a fresh one.
     _draftId = widget.draftId ??
@@ -101,11 +108,7 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
       }
     }
 
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: _headerColor,
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
@@ -114,6 +117,7 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
 
   @override
   void dispose() {
+    if (!_completing) _autoSave(); // leaving mid-inspection keeps it in Pending Inspections
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -183,7 +187,7 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
   // to DraftBloc. The bloc persists it to SharedPreferences and emits
   // DraftSaved, which our BlocListener catches to show the snackbar.
 
-  void _saveDraft(BuildContext context) {
+  InspectionDraft _currentDraft() {
     final totalAnswered = _totalAnswered();
     final totalQuestions = _totalQuestions();
 
@@ -215,10 +219,31 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
       answers: answers,
     );
 
-    // DraftBloc is provided above this widget in the tree (via HomePage or
-    // the route that opens StockpileOverviewPage). Using sl<> as fallback.
-    final draftBloc = context.read<DraftBloc>();
-    draftBloc.add(SaveDraft(draft));
+    return draft;
+  }
+
+  void _saveDraft(BuildContext context) =>
+      context.read<DraftBloc>().add(SaveDraft(_currentDraft()));
+
+  // Background save so an interrupted inspection (back press, app closed, phone off)
+  // still shows under Pending Inspections. Skips unchanged or empty inspections.
+  void _autoSave() {
+    if (_totalAnswered() == 0) return;
+    final draft = _currentDraft();
+    final sig = jsonEncode(draft.answers);
+    if (sig == _lastSavedSig) return;
+    _lastSavedSig = sig;
+    _autoSaving = true;
+    _draftBloc.add(SaveDraft(draft));
+  }
+
+  void _onChecklistProgress(Map<String, String> result) {
+    // May be called while the checklist page is being disposed: apply after the frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _applyResult(result);
+      _autoSave();
+    });
   }
 
   // ─── Complete Inspection ──────────────────────────────────────────────────
@@ -230,6 +255,7 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
     final authState = context.read<AuthBloc>().state;
     final user = authState is Authenticated ? authState.user : null;
 
+    _completing = true;
     Navigator.of(context)
         .push<bool>(
       MaterialPageRoute(
@@ -255,6 +281,7 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
       ),
     )
         .then((submitted) {
+      _completing = false;
       // StockpileCompliancePage should pop with `true` on successful submit.
       if (submitted == true && mounted) {
         context.read<DraftBloc>().add(DeleteDraft(_draftId));
@@ -264,32 +291,7 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
 
   // ─── Section navigation ───────────────────────────────────────────────────
 
-  Future<void> _openSection(int index) async {
-    if (index < 0 || index >= _sections.length) return;
-
-    final result = await Navigator.of(context).push<Map<String, String>>(
-      MaterialPageRoute(
-        builder: (_) => StockpileChecklistPage(
-          sectionIndex: index,
-          sections: _sections,
-          answers: Map.from(_answers),
-          comments: Map.from(_comments),
-          mediaFiles: Map.fromEntries(
-            _mediaFiles.entries
-                .map((e) => MapEntry(e.key, List<String>.from(e.value))),
-          ),
-          actions: Map.from(_actions),
-          mineName: widget.mineName,
-          mineType: widget.mineType,
-          area: widget.area,
-          shift: widget.shift,
-          inspectionType: widget.inspectionType,
-        ),
-      ),
-    );
-
-    if (result == null || !mounted) return;
-
+  void _applyResult(Map<String, String> result) {
     setState(() {
       for (final entry in result.entries) {
         if (entry.key == '__next__') continue;
@@ -315,6 +317,37 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
         }
       }
     });
+  }
+
+  Future<void> _openSection(int index) async {
+    if (index < 0 || index >= _sections.length) return;
+
+    final result = await Navigator.of(context).push<Map<String, String>>(
+      MaterialPageRoute(
+        builder: (_) => StockpileChecklistPage(
+          sectionIndex: index,
+          sections: _sections,
+          answers: Map.from(_answers),
+          comments: Map.from(_comments),
+          mediaFiles: Map.fromEntries(
+            _mediaFiles.entries
+                .map((e) => MapEntry(e.key, List<String>.from(e.value))),
+          ),
+          actions: Map.from(_actions),
+          mineName: widget.mineName,
+          mineType: widget.mineType,
+          area: widget.area,
+          shift: widget.shift,
+          inspectionType: widget.inspectionType,
+          onProgress: _onChecklistProgress,
+        ),
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    _applyResult(result);
+    _autoSave();
 
     final nextStr = result['__next__'];
     if (nextStr != null && mounted) {
@@ -337,10 +370,14 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
     // BlocListener watches DraftBloc for save/error feedback.
     return BlocListener<DraftBloc, DraftState>(
       listener: (context, state) {
+        if (_autoSaving && (state is DraftSaved || state is DraftError)) {
+          _autoSaving = false; // background save: no snackbar
+          return;
+        }
         if (state is DraftSaved) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Draft saved — find it under Pending Inspections'),
+            SnackBar(
+              content: Text(tr('Draft saved — find it under Pending Inspections')),
               backgroundColor: Color(0xFF3DAA6E),
               behavior: SnackBarBehavior.floating,
             ),
@@ -371,7 +408,7 @@ class _StockpileOverviewPageState extends State<StockpileOverviewPage> {
                   children: [
                     const SizedBox(height: 4),
                     Text(
-                      'CHECKLIST SECTIONS',
+                      tr('CHECKLIST SECTIONS'),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -548,10 +585,11 @@ final progress = total > 0 ? answered / total : 0.0;
 final statusBarHeight = MediaQuery.of(context).padding.top;
 
 return Container(
-height: 190, // keep same visual height as current header
+width: double.infinity,
+constraints: const BoxConstraints(minHeight: 190), // grows when text wraps on phones
 color: _headerColor,
 child: Stack(
-fit: StackFit.expand,
+fit: StackFit.passthrough,
 children: [
 // Right-side stockpile image
 Positioned.fill(
@@ -634,7 +672,7 @@ Positioned.fill(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Stockpile Inspection Checklist',
+                      tr('Stockpile Inspection Checklist'),
                       style:
                           AppTextStyles.headlineMedium.copyWith(
                         color: Colors.white,
@@ -692,7 +730,7 @@ Positioned.fill(
                   PopupMenuItem(
                     value: _OverviewMenuOption.exitInspection,
                     child: Row(
-                      children: const [
+                      children: [
                         Icon(
                           Icons.exit_to_app_outlined,
                           size: 20,
@@ -700,7 +738,7 @@ Positioned.fill(
                         ),
                         SizedBox(width: 12),
                         Text(
-                          'Exit Inspection',
+                          tr('Exit Inspection'),
                           style: TextStyle(
                             color: Color(0xFFD32F2F),
                           ),
@@ -727,8 +765,8 @@ Positioned.fill(
                 mainAxisAlignment:
                     MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'OVERALL PROGRESS',
+                  Flexible(child: Text(
+                    tr('OVERALL PROGRESS'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -737,15 +775,15 @@ Positioned.fill(
                       ),
                       letterSpacing: 0.9,
                     ),
-                  ),
-                  Text(
+                  )),
+                  Flexible(child: Text(
                     '$answered / $total Completed',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
-                  ),
+                  )),
                 ],
               ),
               const SizedBox(height: 8),
@@ -803,7 +841,7 @@ Positioned.fill(
                         color: enabled ? _headerColor : const Color(0xFFBDBDBD),
                       ),
                       label: Text(
-                        'Save Draft',
+                        tr('Save Draft'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -838,8 +876,8 @@ Positioned.fill(
                           ? () => _onCompleteInspection(context)
                           : null,
                       icon: const Icon(Icons.check_circle_outline, size: 18),
-                      label: const Text(
-                        'Complete Inspection',
+                      label: Text(
+                        tr('Complete Inspection'),
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,

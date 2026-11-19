@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 import 'dart:convert';
 
 import 'package:auto_route/auto_route.dart';
@@ -53,6 +54,7 @@ class _HazardDatabasePageState extends State<HazardDatabasePage> {
       }
     }
 
+    if (!mounted) return; // user left before data loaded
     setState(() {
       _data = parsed;
       _expandedCategories.add(_categories.first);
@@ -66,7 +68,7 @@ class _HazardDatabasePageState extends State<HazardDatabasePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hazard Database'),
+        title: Text(tr('Hazard Database')),
         scrolledUnderElevation: 0,
       ),
       body: _isLoading
@@ -187,9 +189,9 @@ class _HazardDatabasePageState extends State<HazardDatabasePage> {
 
   Widget _buildDetailPanel() {
     if (_activeSheet == null || _activeCategory == null) {
-      return const Center(
+      return Center(
         child: Text(
-          'Select a hazard category from the sidebar',
+          tr('Select a hazard category from the sidebar'),
           style: AppTextStyles.bodyLarge,
         ),
       );

@@ -1,8 +1,35 @@
 import 'dart:math';
+import 'package:mine_wadhwani/core/di/injection_container.dart';
+import 'package:mine_wadhwani/core/error/exceptions.dart';
+import 'package:mine_wadhwani/core/network/api_client.dart';
 import 'package:mine_wadhwani/data/models/aqm_reading.dart';
 
 abstract class AqmDataSource {
   Future<AqmReading> fetchLatestReading();
+}
+
+/// Real device data via our backend proxy to aqi.in (`GET /api/v1/aqm/latest`).
+class RemoteAqmDataSource implements AqmDataSource {
+  final ApiClient _client;
+  RemoteAqmDataSource({ApiClient? client}) : _client = client ?? sl<ApiClient>();
+
+  @override
+  Future<AqmReading> fetchLatestReading({String? serialNo}) async {
+    try {
+      final res = await _client.get(
+        '/api/v1/aqm/latest',
+        queryParameters: serialNo == null ? null : {'serialNo': serialNo},
+      );
+      final data = (res.data as Map<String, dynamic>)['data'] as Map<String, dynamic>;
+      final online = data['isOnline'];
+      if (online == false || online == 0 || '$online'.toLowerCase() == 'offline') {
+        throw AqmFetchException('AQM device is offline (last update ${data['timeago'] ?? 'unknown'}).');
+      }
+      return AqmReading.fromAqiIn(data);
+    } on ServerException catch (e) {
+      throw AqmFetchException(e.message);
+    }
+  }
 }
 
 class MockAqmDataSource implements AqmDataSource {

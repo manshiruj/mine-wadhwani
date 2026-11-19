@@ -1,6 +1,9 @@
 import questions from "../Models/seed_data.js";
 import ApiResponse from "../Utils/Apiresponse.js";
 import QuestionModel from "../Models/form_data.model.js";
+import { runShiftAgent } from "../Services/shift_agent.js";
+import { track } from "../Services/agent_registry.js";
+import { languageFromReq } from "../Utils/llm.js";
 const get_form_data = (req, res) => {
   try {
     return res
@@ -132,6 +135,13 @@ const save_data = async (req, res) => {
     }
 
     console.log(Question);
+    if (Question.completed) {
+      // Background: corrective actions, alerts and next-shift handover (never blocks the submit).
+      track("shift", () => runShiftAgent(Question, req.user, languageFromReq(req)),
+        (r) => `${r.actions.length} actions, handover for shift ${r.handover.toShift}`).catch((e) =>
+        console.error("Shift agent error:", e.message),
+      );
+    }
     return res
       .status(201)
       .json(ApiResponse.success(Question, "Form data saved successfully", 201));

@@ -1,3 +1,6 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
+import 'package:mine_wadhwani/core/network/api_client.dart';
+import 'package:mine_wadhwani/core/di/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:mine_wadhwani/data/models/health_assessment/health_assessment_model.dart';
 import 'package:mine_wadhwani/presentation/screens/health_assessment/risk_summary_sheet.dart';
@@ -40,7 +43,7 @@ class _HealthAssessmentPromptPageState
   bool _zoneWasAutoSelected = false;
   final Set<String> _selectedModes = {};
 
-  final AqmDataSource _aqmDataSource = MockAqmDataSource();
+  final AqmDataSource _aqmDataSource = RemoteAqmDataSource();
   bool _isFetchingAqm = false;
   String? _aqmFetchError;
   AqmReading? _lastAqmReading;
@@ -145,14 +148,18 @@ class _HealthAssessmentPromptPageState
     try {
       final reading = await _aqmDataSource.fetchLatestReading();
       setState(() {
-        _aqmController('PM2.5 (µg/m³)').text = reading.pm25.toStringAsFixed(1);
-        _aqmController('CO (ppm)').text = reading.co.toStringAsFixed(2);
-        _aqmController('CO2 (ppm)').text = reading.co2.toStringAsFixed(0);
-        _aqmController('H2S (ppm)').text = reading.h2s.toStringAsFixed(3);
-        _aqmController('Methane (%)').text = reading.methane.toStringAsFixed(3);
-        _aqmController('Temperature (°C)').text = reading.temperature.toStringAsFixed(1);
-        _aqmController('Humidity (%)').text = reading.humidity.toStringAsFixed(0);
-        _aqmController('Noise (dB)').text = reading.noise.toString();
+        // Only overwrite fields the device actually reports; others stay manual.
+        void fill(String key, num? v, int digits) {
+          if (v != null) _aqmController(key).text = v.toStringAsFixed(digits);
+        }
+        fill('PM2.5 (µg/m³)', reading.pm25, 1);
+        fill('CO (ppm)', reading.co, 2);
+        fill('CO2 (ppm)', reading.co2, 0);
+        fill('H2S (ppm)', reading.h2s, 3);
+        fill('Methane (%)', reading.methane, 3);
+        fill('Temperature (°C)', reading.temperature, 1);
+        fill('Humidity (%)', reading.humidity, 0);
+        fill('Noise (dB)', reading.noise, 0);
         _lastAqmReading = reading;
         _isFetchingAqm = false;
       });
@@ -314,7 +321,13 @@ class _HealthAssessmentPromptPageState
 
   void _submit() {
     if (!_canSubmit) return;
+    final result = _buildResult();
+    // AI Health Manager: stores the assessment; the server raises an alert when risk is High/Critical.
+    _healthManager(result, persist: true).catchError((_) => <String, dynamic>{});
+    Navigator.of(context).pop(result);
+  }
 
+  HealthAssessmentModel _buildResult() {
     final aqmReadings = <String, String>{};
     if (_selectedModes.contains('AQM')) {
       for (final field in _aqmFields) {
@@ -343,7 +356,7 @@ class _HealthAssessmentPromptPageState
       }
     }
 
-    Navigator.of(context).pop(HealthAssessmentModel(
+    return HealthAssessmentModel(
       conducted: true,
       zone: _selectedZone!,
       modes: _selectedModes.toList(),
@@ -352,8 +365,26 @@ class _HealthAssessmentPromptPageState
       workerReadings: workerReadings,
       notes: _notesController.text.trim(),
       assessedAt: DateTime.now(),
-    ));
+    );
   }
+
+  /// AI Health Manager agent (backend): risk score from AQM + PPE + smartwatch, plus suggestions.
+  Future<Map<String, dynamic>> _healthManager(HealthAssessmentModel r, {bool persist = false}) async {
+    final res = await sl<ApiClient>().post('/api/v1/health/assess', data: {
+      'mine_name': widget.mineName,
+      'area': widget.area,
+      'zone': r.zone,
+      'shift': widget.shift,
+      'aqm': r.aqmReadings,
+      'ppe': r.droneReadings,
+      'workers': [
+        for (final w in r.workerReadings) {'name': w.name, 'heartRate': w.heartRate, 'spo2': w.spo2}
+      ],
+      'persist': persist,
+    });
+    return ((res.data as Map)['data'] as Map).cast<String, dynamic>();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -382,13 +413,13 @@ class _HealthAssessmentPromptPageState
       automaticallyImplyLeading: false,
       title: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('🩺 Worker Health & Safety Assessment',
+                Text(tr('🩺 Worker Health & Safety Assessment'),
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text('Optional — before checklist',
+                Text(tr('Optional — before checklist'),
                     style: TextStyle(fontSize: 11, color: Colors.white60)),
               ],
             ),
@@ -477,13 +508,13 @@ class _HealthAssessmentPromptPageState
                   child: const Icon(Icons.health_and_safety_rounded, color: _headerColor, size: 26),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Do you want to conduct a health assessment for workers in this shift/zone?',
+                Text(
+                  tr('Do you want to conduct a health assessment for workers in this shift/zone?'),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E), height: 1.4),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Uses AQM readings, drone sweep results, or smartwatch spot-checks. This step is optional and can be skipped.',
+                  tr('Uses AQM readings, drone sweep results, or smartwatch spot-checks. This step is optional and can be skipped.'),
                   style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.4),
                 ),
                 const SizedBox(height: 24),
@@ -497,7 +528,7 @@ class _HealthAssessmentPromptPageState
                           side: const BorderSide(color: Color(0xFFD5D8E0)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: const Text('No', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                        child: Text(tr('No'), style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -511,7 +542,7 @@ class _HealthAssessmentPromptPageState
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           elevation: 0,
                         ),
-                        child: const Text('Yes', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: Text(tr('Yes'), style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -609,7 +640,7 @@ class _HealthAssessmentPromptPageState
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedZone,
-              hint: Text('Select zone', style: TextStyle(color: Colors.grey[400])),
+              hint: Text(tr('Select zone'), style: TextStyle(color: Colors.grey[400])),
               isExpanded: true,
               icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _headerColor),
               items: _zones.map((z) => DropdownMenuItem(value: z, child: Text(z))).toList(),
@@ -622,7 +653,7 @@ class _HealthAssessmentPromptPageState
         ),
         if (_zoneWasAutoSelected) ...[
           const SizedBox(height: 6),
-          Text('Auto-selected based on inspection type — tap to change',
+          Text(tr('Auto-selected based on inspection type — tap to change'),
               style: TextStyle(fontSize: 11, color: Colors.grey[500], fontStyle: FontStyle.italic)),
         ],
       ],
@@ -658,7 +689,7 @@ class _HealthAssessmentPromptPageState
               children: [
                 Icon(mode['icon'] as IconData, size: 18, color: isSelected ? Colors.white : const Color(0xFF6B7280)),
                 const SizedBox(width: 8),
-                Text(mode['label'] as String,
+                Text(tr(mode['label'] as String),
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: isSelected ? Colors.white : const Color(0xFF1A1A2E))),
@@ -683,10 +714,10 @@ Widget _buildAqmCard() {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
+            children: [
               Icon(Icons.air_rounded, size: 16, color: _headerColor),
               SizedBox(width: 8),
-              Text('AQM Reading', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(tr('AQM Reading'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 12),
@@ -745,7 +776,7 @@ Widget _buildAqmCard() {
                   TextButton(
                     onPressed: _fetchAqmReading,
                     style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
-                    child: const Text('Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _flagColor)),
+                    child: Text(tr('Retry'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _flagColor)),
                   ),
                 ],
               ),
@@ -779,10 +810,10 @@ Widget _buildAqmCard() {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
+            children: [
               Icon(Icons.flight_rounded, size: 16, color: _headerColor),
               SizedBox(width: 8),
-              Text('Drone Sweep', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(tr('Drone Sweep'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 12),
@@ -851,7 +882,7 @@ Widget _buildAqmCard() {
                   TextButton(
                     onPressed: () => _droneImageBytes != null ? _analyzeDroneImage(_droneImageBytes!) : null,
                     style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
-                    child: const Text('Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _flagColor)),
+                    child: Text(tr('Retry'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _flagColor)),
                   ),
                 ],
               ),
@@ -880,10 +911,10 @@ Widget _buildAqmCard() {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
+            children: [
               Icon(Icons.watch_rounded, size: 16, color: _headerColor),
               SizedBox(width: 8),
-              Text('Smartwatch Spot-Check', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(tr('Smartwatch Spot-Check'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 12),
@@ -896,7 +927,7 @@ Widget _buildAqmCard() {
           OutlinedButton.icon(
             onPressed: _addWorker,
             icon: const Icon(Icons.add_rounded, size: 18, color: _headerColor),
-            label: const Text('Add Another Worker', style: TextStyle(color: _headerColor, fontWeight: FontWeight.w600)),
+            label: Text(tr('Add Another Worker'), style: TextStyle(color: _headerColor, fontWeight: FontWeight.w600)),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: _headerColor),
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -944,7 +975,7 @@ Widget _buildAqmCard() {
             controller: _workerNameControllers[id],
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              labelText: 'Worker Name',
+              labelText: tr('Worker Name'),
               isDense: true,
               filled: true,
               fillColor: const Color(0xFFF5F7FA),
@@ -955,13 +986,13 @@ Widget _buildAqmCard() {
           const SizedBox(height: 10),
           _flaggableField(
             controller: _workerHrControllers[id]!,
-            label: 'Heart Rate (bpm)',
+            label: tr('Heart Rate (bpm)'),
             isFlagged: () => _isHrFlagged(_workerHrControllers[id]!.text),
             flagMessage: 'Outside safe range (${HealthThresholds.minHeartRate.toInt()}–${HealthThresholds.maxHeartRate.toInt()} bpm)',
           ),
           _flaggableField(
             controller: _workerSpo2Controllers[id]!,
-            label: 'SpO2 (%)',
+            label: tr('SpO2 (%)'),
             isFlagged: () => _isSpo2Flagged(_workerSpo2Controllers[id]!.text),
             flagMessage: 'Below safe oxygen level (< ${HealthThresholds.minSpo2.toInt()}%)',
           ),
@@ -1031,8 +1062,8 @@ Widget _flaggableField({
       child: TextField(
         controller: _notesController,
         maxLines: 3,
-        decoration: const InputDecoration(
-          hintText: 'Any additional observations...',
+        decoration: InputDecoration(
+          hintText: tr('Any additional observations...'),
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(14),
         ),
@@ -1084,7 +1115,7 @@ Widget _flaggableField({
                         side: BorderSide(color: _canSubmit ? _headerColor : const Color(0xFFD5D8E0)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: Text('View Risk Summary',
+                      child: Text(tr('View Risk Summary'),
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: _canSubmit ? _headerColor : const Color(0xFFBDBDBD))),
@@ -1104,7 +1135,7 @@ Widget _flaggableField({
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               elevation: 0,
             ),
-            child: const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Text(tr('Continue'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ),
@@ -1137,6 +1168,7 @@ Widget _flaggableField({
       flagCount: _liveFlagCount,
       totalChecks: totalChecks,
       flagDetails: details,
+      aiAssessment: _healthManager(_buildResult()),
     );
   }
 }

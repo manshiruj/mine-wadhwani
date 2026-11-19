@@ -1,0 +1,266 @@
+import 'package:flutter/widgets.dart';
+import 'package:mine_wadhwani/core/l10n/hi_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// App language. UI strings for new screens exist in English + Hindi (others fall back to English);
+/// AI content (handover, actions, voice fill, checklist question translation) works in every listed language.
+class AppLanguage {
+  AppLanguage._();
+
+  static const Map<String, String> supported = {
+    'en': 'English',
+    'hi': 'हिन्दी',
+    'bn': 'বাংলা',
+    'or': 'ଓଡ଼ିଆ',
+    'te': 'తెలుగు',
+    'ta': 'தமிழ்',
+    'mr': 'मराठी',
+  };
+
+  /// Locale ids for on-device speech recognition.
+  static const Map<String, String> speechLocales = {
+    'en': 'en_IN',
+    'hi': 'hi_IN',
+    'bn': 'bn_IN',
+    'or': 'or_IN',
+    'te': 'te_IN',
+    'ta': 'ta_IN',
+    'mr': 'mr_IN',
+  };
+
+  static const _key = 'app_language';
+  static final ValueNotifier<String> current = ValueNotifier('en');
+  static SharedPreferences? _prefs;
+
+  static void load(SharedPreferences prefs) {
+    _prefs = prefs;
+    final saved = prefs.getString(_key);
+    current.value = supported.containsKey(saved) ? saved! : 'en';
+  }
+
+  static Future<void> set(String code) async {
+    if (!supported.containsKey(code)) return;
+    current.value = code;
+    await _prefs?.setString(_key, code);
+    // Re-run build() everywhere so tr() picks up the new language on open screens too.
+    void rebuild(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(rebuild);
+    }
+    WidgetsBinding.instance.rootElement?.visitChildren(rebuild);
+  }
+}
+
+/// Looks up a key (new screens) or an English UI label (older screens, via [hiUi]).
+String tr(String key) {
+  final lang = AppLanguage.current.value;
+  return _strings[lang]?[key] ??
+      (lang == 'hi' ? hiUi[key] : null) ??
+      _strings['en']![key] ??
+      key;
+}
+
+const Map<String, Map<String, String>> _strings = {
+  'en': {
+    'ai_agents': 'AI Agents',
+    'agents_intro': 'These agents work at the same time: some react to events (an inspection is submitted, a health check is done), others run on a schedule (escalation every 15 min, risk monitoring every 10 min).',
+    'trigger': 'Trigger',
+    'runs': 'Runs',
+    'last_run': 'Last run',
+    'open': 'Open',
+    'risk_monitor': 'AI Risk Monitor',
+    'add_zone': 'Add zone',
+    'add_reading': 'Add reading',
+    'manual_only': 'manual readings',
+    'no_readings_yet': 'No readings yet. Add a reading to start monitoring.',
+    'updated': 'Updated',
+    'grade': 'Grade',
+    'risk_index': 'Risk index',
+    'baseline_index': 'Baseline index',
+    'safety_alerts': 'Safety alerts (rule engine)',
+    'measured': 'Measured',
+    'ml_model': 'ML model',
+    'confidence': 'Confidence',
+    'expected_grade': 'Expected grade',
+    'factor_contributions': 'What drives the prediction',
+    'vs_average': 'Change in grade vs. a reading with no data',
+    'forecast_6h': 'Forecast (next 6 h)',
+    'projected': 'Projected',
+    'data_quality': 'Data quality and unknowns',
+    'model_note': 'Grade model trained on published lab data (Guo 2019, Zhang 2025) with grade bands from Pei 2024. It is a screening aid; confirm with on-site inspection.',
+    'reading_hint': 'Enter what you measured; leave the rest empty. The agent assesses immediately.',
+    'assess_now': 'Save and assess',
+    'zone_name': 'Zone (e.g. Stockpile B north face)',
+    'environment': 'Environment',
+    'device_serial_optional': 'AQM device serial (optional)',
+    'open_monitor': 'Live AI monitor',
+    'Safe': 'Safe',
+    'Severe': 'Severe',
+    'ai_health_manager': 'AI Health Manager',
+    'human_review': 'Human review required',
+    'key_risks': 'Key risks',
+    'recommended_actions': 'Recommended actions',
+    'worker_advice': 'Advice for workers',
+    'not_measured': 'Not measured',
+    'Low': 'Low', 'Moderate': 'Moderate', 'High': 'High', 'Critical': 'Critical',
+    'mic_unavailable': 'Microphone not available here. In a browser it needs an https:// or localhost page and mic permission. You can type or paste your notes instead.',
+    'assistant': 'Safety Assistant',
+    'assistant_intro': 'Ask about inspections, hazards, risk scores, corrective actions or DGMS rules. Answers use your mine\'s live data.',
+    'ask_anything': 'Ask a question…',
+    'chat_q_risk': 'How is the risk analytics score calculated?',
+    'chat_q_actions': 'Which corrective actions are overdue?',
+    'chat_q_handover': 'Summarise the last shift handover',
+    'chat_q_haul': 'What should I check on a haul road before the shift?',
+    'language': 'Language',
+    'handover': 'Shift Handover',
+    'handover_pending': 'Pending sign-off',
+    'handover_all': 'All handovers',
+    'handover_from': 'From',
+    'handover_to_shift': 'For shift',
+    'critical': 'Critical',
+    'watch_next': 'Check this shift',
+    'open_actions': 'Open actions',
+    'sign_off': 'Sign off handover',
+    'signed_by': 'Signed off by',
+    'your_name': 'Your name',
+    'note_optional': 'Note (optional)',
+    'draw_signature': 'Draw your signature',
+    'clear': 'Clear',
+    'submit': 'Submit',
+    'retry': 'Retry',
+    'nothing_here': 'Nothing here yet',
+    'actions': 'Corrective Actions',
+    'closed': 'Closed',
+    'due': 'Due',
+    'overdue': 'Overdue',
+    'owner': 'Owner',
+    'close_action': 'Mark as fixed',
+    'fix_note': 'What was done to fix it?',
+    'escalated': 'Escalated',
+    'alerts': 'Alerts',
+    'mark_all_read': 'Mark all read',
+    'dashboard': 'Mines Dashboard',
+    'dashboard_desc': 'Compliance trends, per-mine scores and shift comparison across all mines.',
+    'inspections': 'Inspections',
+    'compliance': 'Compliance',
+    'non_compliant': 'Non-compliant',
+    'by_mine': 'By mine (worst first)',
+    'by_shift': 'Shift comparison',
+    'trend': 'Daily compliance',
+    'admin_only': 'Admin access only',
+    'voice_fill': 'Voice fill',
+    'voice_hint': 'Speak or type your observations for this section, e.g. "Road width fine, gradient too steep near km 2, no water spraying".',
+    'listening': 'Listening…',
+    'tap_to_speak': 'Tap mic to speak',
+    'fill_checklist': 'Fill checklist',
+    'filled_n': 'answers filled — please review',
+    'ask_next': 'Also check',
+    'no_match': 'No answers could be matched. Add more detail.',
+    'queued_offline': 'No network — inspection saved on this device and will upload automatically when online.',
+    'pending_sync': 'to sync',
+    'translate_questions': 'Questions shown in selected language (AI translated)',
+    'card_actions_desc': 'Auto-raised from every non-compliant answer. Close fixes; overdue items escalate to the mine admin.',
+    'card_handover_desc': 'AI-written handover from the previous shift. Read it and sign off before starting.',
+  },
+  'hi': {
+    'ai_agents': 'AI एजेंट',
+    'agents_intro': 'ये एजेंट एक साथ काम करते हैं: कुछ घटनाओं पर (निरीक्षण जमा होना, स्वास्थ्य जाँच), कुछ तय समय पर (हर 15 मिनट एस्केलेशन, हर 10 मिनट जोखिम निगरानी)।',
+    'trigger': 'ट्रिगर',
+    'runs': 'रन',
+    'last_run': 'पिछला रन',
+    'open': 'खुले',
+    'risk_monitor': 'AI जोखिम निगरानी',
+    'add_zone': 'ज़ोन जोड़ें',
+    'add_reading': 'रीडिंग जोड़ें',
+    'manual_only': 'मैनुअल रीडिंग',
+    'no_readings_yet': 'अभी कोई रीडिंग नहीं। निगरानी शुरू करने के लिए रीडिंग जोड़ें।',
+    'updated': 'अपडेट',
+    'grade': 'ग्रेड',
+    'risk_index': 'जोखिम सूचकांक',
+    'baseline_index': 'बेसलाइन सूचकांक',
+    'safety_alerts': 'सुरक्षा अलर्ट (नियम इंजन)',
+    'measured': 'मापा गया',
+    'ml_model': 'ML मॉडल',
+    'confidence': 'विश्वास',
+    'expected_grade': 'अपेक्षित ग्रेड',
+    'factor_contributions': 'अनुमान किन कारणों से',
+    'vs_average': 'बिना डेटा वाली रीडिंग की तुलना में ग्रेड में बदलाव',
+    'forecast_6h': 'पूर्वानुमान (अगले 6 घंटे)',
+    'projected': 'अनुमानित',
+    'data_quality': 'डेटा गुणवत्ता और अज्ञात',
+    'model_note': 'ग्रेड मॉडल प्रकाशित प्रयोगशाला डेटा (Guo 2019, Zhang 2025) और Pei 2024 के ग्रेड बैंड पर प्रशिक्षित है। यह जाँच में सहायक है; स्थल निरीक्षण से पुष्टि करें।',
+    'reading_hint': 'जो मापा है वह भरें; बाकी खाली छोड़ें। एजेंट तुरंत आकलन करेगा।',
+    'assess_now': 'सेव करें और आकलन करें',
+    'zone_name': 'ज़ोन (जैसे स्टॉकपाइल B उत्तर)',
+    'environment': 'वातावरण',
+    'device_serial_optional': 'AQM डिवाइस सीरियल (वैकल्पिक)',
+    'open_monitor': 'लाइव AI निगरानी',
+    'Safe': 'सुरक्षित',
+    'Severe': 'अति गंभीर',
+    'ai_health_manager': 'AI स्वास्थ्य प्रबंधक',
+    'human_review': 'मानवीय समीक्षा आवश्यक',
+    'key_risks': 'मुख्य जोखिम',
+    'recommended_actions': 'सुझाए गए कदम',
+    'worker_advice': 'कर्मचारियों के लिए सलाह',
+    'not_measured': 'मापा नहीं गया',
+    'Low': 'कम', 'Moderate': 'मध्यम', 'High': 'उच्च', 'Critical': 'गंभीर',
+    'mic_unavailable': 'यहाँ माइक्रोफ़ोन उपलब्ध नहीं है। ब्राउज़र में इसके लिए https:// या localhost पेज और माइक की अनुमति चाहिए। आप नोट्स टाइप या पेस्ट भी कर सकते हैं।',
+    'assistant': 'सुरक्षा सहायक',
+    'assistant_intro': 'निरीक्षण, खतरे, जोखिम स्कोर, सुधारात्मक कार्य या DGMS नियमों के बारे में पूछें। जवाब आपकी खदान के लाइव डेटा पर आधारित हैं।',
+    'ask_anything': 'प्रश्न पूछें…',
+    'chat_q_risk': 'रिस्क एनालिटिक्स स्कोर कैसे निकाला जाता है?',
+    'chat_q_actions': 'कौन से सुधारात्मक कार्य समय सीमा पार कर चुके हैं?',
+    'chat_q_handover': 'पिछली शिफ्ट के हैंडओवर का सारांश बताएँ',
+    'chat_q_haul': 'शिफ्ट से पहले हॉल रोड पर क्या जाँचना चाहिए?',
+    'language': 'भाषा',
+    'handover': 'शिफ्ट हैंडओवर',
+    'handover_pending': 'हस्ताक्षर बाकी',
+    'handover_all': 'सभी हैंडओवर',
+    'handover_from': 'द्वारा',
+    'handover_to_shift': 'शिफ्ट के लिए',
+    'critical': 'गंभीर',
+    'watch_next': 'इस शिफ्ट में जाँचें',
+    'open_actions': 'खुले कार्य',
+    'sign_off': 'हैंडओवर पर हस्ताक्षर करें',
+    'signed_by': 'हस्ताक्षरकर्ता',
+    'your_name': 'आपका नाम',
+    'note_optional': 'टिप्पणी (वैकल्पिक)',
+    'draw_signature': 'अपने हस्ताक्षर करें',
+    'clear': 'मिटाएँ',
+    'submit': 'जमा करें',
+    'retry': 'फिर से कोशिश करें',
+    'nothing_here': 'अभी कुछ नहीं है',
+    'actions': 'सुधारात्मक कार्य',
+    'closed': 'बंद',
+    'due': 'नियत',
+    'overdue': 'समय सीमा पार',
+    'owner': 'ज़िम्मेदार',
+    'close_action': 'ठीक हो गया',
+    'fix_note': 'इसे ठीक करने के लिए क्या किया गया?',
+    'escalated': 'आगे भेजा गया',
+    'alerts': 'अलर्ट',
+    'mark_all_read': 'सभी पढ़ा हुआ करें',
+    'dashboard': 'खदान डैशबोर्ड',
+    'dashboard_desc': 'सभी खदानों में अनुपालन रुझान, खदान-वार स्कोर और शिफ्ट तुलना।',
+    'inspections': 'निरीक्षण',
+    'compliance': 'अनुपालन',
+    'non_compliant': 'गैर-अनुपालन',
+    'by_mine': 'खदान-वार (सबसे खराब पहले)',
+    'by_shift': 'शिफ्ट तुलना',
+    'trend': 'दैनिक अनुपालन',
+    'admin_only': 'केवल एडमिन के लिए',
+    'voice_fill': 'बोलकर भरें',
+    'voice_hint': 'इस सेक्शन के लिए अपनी टिप्पणियाँ बोलें या लिखें, जैसे "सड़क की चौड़ाई ठीक है, किमी 2 के पास ढलान ज़्यादा है, पानी का छिड़काव नहीं हुआ"।',
+    'listening': 'सुन रहा है…',
+    'tap_to_speak': 'बोलने के लिए माइक दबाएँ',
+    'fill_checklist': 'चेकलिस्ट भरें',
+    'filled_n': 'उत्तर भरे गए — कृपया जाँच लें',
+    'ask_next': 'यह भी जाँचें',
+    'no_match': 'कोई उत्तर नहीं मिला। थोड़ा और विस्तार से बताएँ।',
+    'queued_offline': 'नेटवर्क नहीं है — निरीक्षण इस डिवाइस पर सेव हो गया है, नेटवर्क आने पर अपने आप अपलोड होगा।',
+    'pending_sync': 'सिंक बाकी',
+    'translate_questions': 'प्रश्न चुनी गई भाषा में दिखाए गए हैं (AI अनुवाद)',
+    'card_actions_desc': 'हर गैर-अनुपालन उत्तर से अपने आप बनते हैं। ठीक होने पर बंद करें; समय सीमा पार होने पर खदान एडमिन को भेजे जाते हैं।',
+    'card_handover_desc': 'पिछली शिफ्ट का AI द्वारा लिखा हैंडओवर। शुरू करने से पहले पढ़ें और हस्ताक्षर करें।',
+  },
+};

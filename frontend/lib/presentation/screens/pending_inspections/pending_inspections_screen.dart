@@ -1,3 +1,4 @@
+import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // import 'package:flutter/material.dart';
 // import 'package:flutter_bloc/flutter_bloc.dart';
 // import 'package:mine_wadhwani/data/models/draft/inspection_draft_model.dart';
@@ -496,11 +497,11 @@ class PendingInspectionsScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
             const SizedBox(width: 8),
-            const Column(
+            Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Pending Inspections',
+                  tr('Pending Inspections'),
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -508,11 +509,11 @@ class PendingInspectionsScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Resume or discard saved drafts',
+                  tr('Resume or discard saved drafts'),
                   style: TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
-            ),
+            )),
           ],
         ),
       ),
@@ -533,8 +534,8 @@ class PendingInspectionsScreen extends StatelessWidget {
             child: const Icon(Icons.history_rounded, size: 52, color: primary),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'No Pending Inspections',
+          Text(
+            tr('No Pending Inspections'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -543,7 +544,7 @@ class PendingInspectionsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Saved drafts from ongoing inspections\nwill appear here.',
+            tr('Saved drafts from ongoing inspections\nwill appear here.'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
@@ -571,20 +572,20 @@ class PendingInspectionsScreen extends StatelessWidget {
       builder: (_) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Discard Draft?'),
-        content: const Text(
-            'This inspection draft will be permanently deleted.'),
+        title: Text(tr('Discard Draft?')),
+        content: Text(
+            tr('This inspection draft will be permanently deleted.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
           TextButton(
             onPressed: () {
               context.read<DraftBloc>().add(DeleteDraft(id));
               Navigator.pop(context);
             },
-            child: const Text('Discard',
+            child: Text(tr('Discard'),
                 style: TextStyle(color: Colors.redAccent)),
           ),
         ],
@@ -699,7 +700,7 @@ class _DraftCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Completion',
+                    Text(tr('Completion'),
                         style: TextStyle(
                             fontSize: 12, color: Colors.grey[500])),
                     Text(
@@ -740,7 +741,7 @@ class _DraftCard extends StatelessWidget {
                     onPressed: onDelete,
                     icon: const Icon(Icons.delete_outline_rounded,
                         size: 16, color: Colors.redAccent),
-                    label: const Text('Discard',
+                    label: Text(tr('Discard'),
                         style: TextStyle(color: Colors.redAccent)),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Colors.redAccent),
@@ -757,8 +758,8 @@ class _DraftCard extends StatelessWidget {
                     onPressed: onResume,
                     icon: const Icon(Icons.play_arrow_rounded,
                         size: 18, color: Colors.white),
-                    label: const Text(
-                      'Resume Inspection',
+                    label: Text(
+                      tr('Resume Inspection'),
                       style: TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 13),
                     ),

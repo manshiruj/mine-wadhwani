@@ -1,0 +1,11 @@
+source,seq,co2_ppm,c2h4_ppm,c2h6_ppm,co_ppm,o2_pct,level
+Zhang2025_ApplSci_Tab2_Longgu,1,600.0,0.0,0.0,0.0,20.56,Safe
+Zhang2025_ApplSci_Tab2_Longgu,2,600.0,0.0,0.0,0.0,20.37,Safe
+Zhang2025_ApplSci_Tab2_Longgu,3,5300.0,0.0,0.0,9.0,19.39,Low Risk
+Zhang2025_ApplSci_Tab2_Longgu,4,6800.000000000001,0.0,0.0,8.0,19.22,Low Risk
+Zhang2025_ApplSci_Tab2_Longgu,5,7500.0,0.0,0.0,5.0,19.63,Low Risk
+Zhang2025_ApplSci_Tab2_Longgu,6,9500.0,0.0,6.2,107.0,17.95,High Risk
+Zhang2025_ApplSci_Tab2_Longgu,7,9100.0,0.0,8.55,132.0,16.97,High Risk
+Zhang2025_ApplSci_Tab2_Longgu,8,14500.0,0.0,13.53,192.0,15.21,Severe Risk
+Zhang2025_ApplSci_Tab2_Longgu,9,16400.0,0.0,13.31,199.0,15.18,Severe Risk
+Zhang2025_ApplSci_Tab2_Longgu,10,15900.0,0.0,15.64,226.0,13.94,Severe Risk
