@@ -212,7 +212,7 @@ const AQM_FIELDS = [
   [/^co2/, "co2_ppm"],
   [/^co$/, "co_ppm"],
   [/^temp$/, "ambient_temp_c"],
-  [/^hum/, "humidity_pct"],
+  [/^hum$/, "humidity_pct"], // not "Humi B"
   [/^pm25/, "pm25"],
 ];
 
@@ -230,7 +230,8 @@ const pollAqm = async (monitors) => {
       const key = name.toLowerCase().replace(/\s/g, "").split("(")[0];
       if (/fer/i.test(name)) continue; // Fahrenheit twin
       const f = AQM_FIELDS.find(([re]) => re.test(key))?.[1];
-      if (f && Number.isFinite(Number(s.value))) reading[f] = Number(s.value);
+      // First sensor wins: "Temp(cel)" comes before the uncalibrated "Temp(orignal)".
+      if (f && reading[f] === undefined && Number.isFinite(Number(s.value))) reading[f] = Number(s.value);
     }
     await RiskReadingModel.create(reading);
     added++;

@@ -128,3 +128,16 @@ test("risk: reported safety alerts are exactly the rule engine's alerts (no dupl
   assert.deepEqual(explanation.data_quality_warnings, a.data_quality);
   process.env.LLM_API_KEY = saved;
 });
+
+test("toSensorMap: ppb -> ppm, negative gas dropped, first duplicate wins", async () => {
+  const { toSensorMap } = await import("../src/Controller/aqm.controller.js");
+  const m = toSensorMap([
+    { sensorid: 33, sensorname: "CO(ppb)", sensorvalue: 656, unit: "ppb" },
+    { sensorid: 27, sensorname: "H2S(ppm)", sensorvalue: -27.566, unit: "ppm" },
+    { sensorid: 11, sensorname: "Temp(cel)", sensorvalue: 38, unit: "°C" },
+    { sensorid: 104, sensorname: "Temp(cel)", sensorvalue: 29.8, unit: "°C" },
+  ]);
+  assert.deepEqual(m["CO(ppm)"], { id: 33, value: 0.656, unit: "ppm" });
+  assert.equal(m["H2S(ppm)"], undefined);
+  assert.equal(m["Temp(cel)"].value, 38);
+});

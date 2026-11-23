@@ -41,10 +41,25 @@ const aqiGet = async (path, params = {}, extraHeaders = {}) => {
   }
 };
 
-const toSensorMap = (realtime = []) =>
-  Object.fromEntries(
-    realtime.map((s) => [s.sensorname, { id: s.sensorid, value: s.sensorvalue, unit: s.unit }]),
-  );
+// Gas readings are normalised to ppm ("CO(ppb)" 656 -> "CO(ppm)" 0.656) because every limit downstream is in ppm;
+// negative gas values (sensor fault, e.g. H2S -27.5) are dropped so they show as "not measured".
+const toSensorMap = (realtime = []) => {
+  const out = {};
+  for (const s of realtime) {
+    let name = s.sensorname;
+    let value = s.sensorvalue;
+    let unit = s.unit;
+    const gas = /^pp[bm]$/i.test(unit ?? "");
+    if (gas && Number(value) < 0) continue;
+    if (/^ppb$/i.test(unit ?? "")) {
+      name = name.replace(/\(ppb\)/i, "(ppm)");
+      value = Math.round((Number(value) / 1000) * 1e4) / 1e4;
+      unit = "ppm";
+    }
+    if (!(name in out)) out[name] = { id: s.sensorid, value, unit };
+  }
+  return out;
+};
 
 // Device list with realtime sensor readings flattened to { sensorname: { id, value, unit } }.
 const get_devices = async (req, res) => {

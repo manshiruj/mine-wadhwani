@@ -1085,8 +1085,13 @@ import 'package:mine_wadhwani/core/l10n/app_language.dart';
 // }
 
 
+
+
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:mine_wadhwani/core/di/injection_container.dart';
+import 'package:mine_wadhwani/core/error/exceptions.dart';
+import 'package:mine_wadhwani/core/network/api_client.dart';
 
 class RiskAnalysisScreen extends StatefulWidget {
   const RiskAnalysisScreen({super.key});
@@ -1095,6 +1100,8 @@ class RiskAnalysisScreen extends StatefulWidget {
   State<RiskAnalysisScreen> createState() => _RiskAnalysisScreenState();
 }
 
+/// Stockpile risk analysis using the trained heating-grade model + safety rules + AI explanation
+/// (backend POST /api/v1/risk-monitor/assess, the same pipeline as the Risk Monitor agent).
 class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
     with TickerProviderStateMixin {
   static const Color primary = Color(0xFF1F579C);
@@ -1108,19 +1115,25 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
     'G7','G8','G9','G10','G11','G12','G13','G14',
   ];
 
-  final _tempController  = TextEditingController(text: '38');
-  final _rhController    = TextEditingController(text: '13');
-  final _o2Controller    = TextEditingController(text: '20.9');
-  final _coController    = TextEditingController(text: '140');
-  final _finesController = TextEditingController(text: '15');
+  final _tempController = TextEditingController(text: '38');
+  final _o2Controller   = TextEditingController(text: '20.9');
+  final _coController   = TextEditingController(text: '20');
+  final _co2Controller  = TextEditingController();
+  final _c2h4Controller = TextEditingController();
 
-  double _riskScore    = 0;
-  bool   _analysed     = false;
-  bool   _loading      = false;
-  double _previousScore = 0;
+  Map<String, dynamic>? _result;
+  bool   _loading       = false;
+  double _previousNeedle = 0;
+  double _previousIndex  = 0;
 
   late AnimationController _needleController;
   late Animation<double>   _needleAnimation;
+  late Animation<double>   _indexAnimation;
+
+  bool get _analysed => _result != null;
+  int get _grade => (_result?['grade'] as num?)?.toInt() ?? 0;
+  double get _riskIndex => (_result?['risk_index'] as num?)?.toDouble() ?? 0;
+  Map<String, dynamic> get _explanation => ((_result?['explanation'] as Map?) ?? {}).cast<String, dynamic>();
 
   @override
   void initState() {
@@ -1129,31 +1142,19 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
-    _needleAnimation = Tween<double>(begin: 0, end: 0).animate(
-      CurvedAnimation(parent: _needleController, curve: Curves.easeInOutCubic),
-    );
+    _needleAnimation = Tween<double>(begin: 0, end: 0).animate(_needleController);
+    _indexAnimation  = Tween<double>(begin: 0, end: 0).animate(_needleController);
   }
 
   @override
   void dispose() {
     _needleController.dispose();
     _tempController.dispose();
-    _rhController.dispose();
     _o2Controller.dispose();
     _coController.dispose();
-    _finesController.dispose();
+    _co2Controller.dispose();
+    _c2h4Controller.dispose();
     super.dispose();
-  }
-
-  double _gradeToRiskWeight(String grade) {
-    const map = {
-      'G1': 0.05, 'G2': 0.08, 'G3': 0.10,
-      'G4': 0.18, 'G5': 0.22, 'G6': 0.26,
-      'G7': 0.34, 'G8': 0.38, 'G9': 0.42,
-      'G10': 0.58, 'G11': 0.64, 'G12': 0.70,
-      'G13': 0.85, 'G14': 1.00,
-    };
-    return map[grade] ?? 0.5;
   }
 
   String _gradeGroup(String grade) {
@@ -1174,52 +1175,65 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
     return '<3400 kcal/kg';
   }
 
-  double _calculateRisk() {
-    final T     = double.tryParse(_tempController.text)   ?? 25.0;
-    final RH    = double.tryParse(_rhController.text)     ?? 50.0;
-    final O2    = double.tryParse(_o2Controller.text)     ?? 20.9;
-    final CO    = double.tryParse(_coController.text)     ?? 0.0;
-    final fines = double.tryParse(_finesController.text)  ?? 10.0;
-    final gw    = _gradeToRiskWeight(_selectedGrade);
-
-    final tNorm     = ((T - 10)   / 50.0).clamp(0.0, 1.0);
-    final rhNorm    = ((100 - RH) / 100.0).clamp(0.0, 1.0);
-    final o2Norm    = ((21 - O2)  / 21.0).clamp(0.0, 1.0);
-    final coNorm    = (CO          / 500.0).clamp(0.0, 1.0);
-    final finesNorm = (fines        / 100.0).clamp(0.0, 1.0);
-
-    return (gw * 35.0 + tNorm * 20.0 + rhNorm * 15.0
-          + coNorm * 15.0 + o2Norm * 10.0 + finesNorm * 5.0)
-        .clamp(0.0, 100.0);
-  }
-
-  void _analyse() async {
+  Future<void> _analyse() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    final score = _calculateRisk();
-    _needleAnimation = Tween<double>(begin: _previousScore, end: score).animate(
-      CurvedAnimation(parent: _needleController, curve: Curves.easeInOutCubic),
-    );
-    _needleController.forward(from: 0);
-    _previousScore = score;
-
-    setState(() {
-      _riskScore = score;
-      _analysed  = true;
-      _loading   = false;
-    });
+    String? v(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
+    try {
+      final res = await sl<ApiClient>().post('/api/v1/risk-monitor/assess', data: {
+        'environment': 'surface_stockpile',
+        'coal_grade': _selectedGrade,
+        'coal_temp_c': v(_tempController),
+        'o2_pct': v(_o2Controller),
+        'co_ppm': v(_coController),
+        'co2_ppm': v(_co2Controller),
+        'c2h4_ppm': v(_c2h4Controller),
+      });
+      final data = ((res.data as Map)['data'] as Map).cast<String, dynamic>();
+      if (!mounted) return;
+      final grade = (data['grade'] as num).toInt();
+      final index = (data['risk_index'] as num).toDouble();
+      // Gauge has one zone per grade (0-5); keep the needle inside the final grade's zone.
+      const zone = 100 / 6;
+      final needle = index.clamp(grade * zone + 1, (grade + 1) * zone - 1).toDouble();
+      final curve = CurvedAnimation(parent: _needleController, curve: Curves.easeInOutCubic);
+      _needleAnimation = Tween<double>(begin: _previousNeedle, end: needle).animate(curve);
+      _indexAnimation  = Tween<double>(begin: _previousIndex, end: index).animate(curve);
+      _needleController.forward(from: 0);
+      _previousNeedle = needle;
+      _previousIndex  = index;
+      setState(() {
+        _result  = data;
+        _loading = false;
+      });
+    } on ServerException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
-  _RiskLevel _getRiskLevel(double score) {
-    if (score < 17) return _RiskLevel('Low',             const Color(0xFF2E7D32), const Color(0xFFE8F5E9), Icons.check_circle_rounded,        'Acceptable risk. No immediate action required. Follow standard SOPs and routine monitoring.');
-    if (score < 34) return _RiskLevel('Low to Moderate', const Color(0xFF558B2F), const Color(0xFFF1F8E9), Icons.info_rounded,                 'Minor risk detected. Increase monitoring frequency and review coal handling procedures.');
-    if (score < 50) return _RiskLevel('Moderate',        const Color(0xFFF9A825), const Color(0xFFFFFDE7), Icons.warning_amber_rounded,        'Tolerable risk under controlled conditions. Planned mitigation and supervision required.');
-    if (score < 67) return _RiskLevel('Moderately High', const Color(0xFFEF6C00), const Color(0xFFFFF3E0), Icons.warning_rounded,              'Serious risk. Active management and urgent corrective action needed. Alert safety officer.');
-    if (score < 84) return _RiskLevel('High',            const Color(0xFFD32F2F), const Color(0xFFFFEBEE), Icons.dangerous_rounded,            'High risk of spontaneous heating. Work allowed only with strict controls. Daily monitoring mandatory.');
-    return              _RiskLevel('Very High',          const Color(0xFF7B0000), const Color(0xFFFFCDD2), Icons.local_fire_department_rounded, 'CRITICAL: Immediate threat. Halt stockpile operations. Emergency response required. Alert Mine Manager.');
+  static const _zoneColors = [
+    Color(0xFF2E7D32), Color(0xFF558B2F), Color(0xFFF9A825),
+    Color(0xFFEF6C00), Color(0xFFD32F2F), Color(0xFF7B0000),
+  ];
+  static const _zoneBg = [
+    Color(0xFFE8F5E9), Color(0xFFF1F8E9), Color(0xFFFFFDE7),
+    Color(0xFFFFF3E0), Color(0xFFFFEBEE), Color(0xFFFFCDD2),
+  ];
+  static const _levels = ['Safe', 'Low', 'Moderate', 'High', 'Severe', 'Critical'];
+  static const _icons = [
+    Icons.check_circle_rounded, Icons.info_rounded, Icons.warning_amber_rounded,
+    Icons.warning_rounded, Icons.dangerous_rounded, Icons.local_fire_department_rounded,
+  ];
+
+  _RiskLevel _getRiskLevel(int grade) {
+    final g = grade.clamp(0, 5);
+    final summary = _explanation['summary'] as String? ?? '';
+    return _RiskLevel(tr(_levels[g]), _zoneColors[g], _zoneBg[g], _icons[g], summary);
   }
+
+  int _zoneOf(double needle) => (needle / (100 / 6)).floor().clamp(0, 5);
 
   // ── BUILD ────────────────────────────────────────────────────────────────────
   @override
@@ -1247,10 +1261,10 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                         fontWeight: FontWeight.w800,
                         color: primary,
                         height: 1.1)),
-                Text(tr('Enter sensor readings to compute spontaneous heating risk index'),
+                Text(tr('risk_analysis_sub'),
                     style: TextStyle(fontSize: 10, color: Colors.grey[500])),
               ])),
-              // Formula chip only where there is room (tablets / landscape).
+              // Method chip only where there is room (tablets / landscape).
               if (MediaQuery.sizeOf(context).width >= 760)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
@@ -1260,14 +1274,13 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                   border: Border.all(color: primary.withValues(alpha: 0.2)),
                 ),
                 child: Row(children: [
-                  Icon(Icons.functions_rounded, color: primary, size: 13),
+                  Icon(Icons.auto_awesome, color: primary, size: 13),
                   SizedBox(width: 5),
-                  Text(tr('Risk ∝ 1/Grade + f(T, RH, O₂, CO, Fines)'),
+                  Text(tr('ai_method'),
                       style: TextStyle(
                           fontSize: 10,
                           color: primary,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'monospace')),
+                          fontWeight: FontWeight.w600)),
                 ]),
               ),
             ]),
@@ -1355,9 +1368,9 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
               border: Border.all(color: Colors.white24, width: 0.8),
             ),
             child: Row(children: [
-              Icon(Icons.query_stats_rounded, color: Colors.white70, size: 13),
+              Icon(Icons.auto_awesome, color: Colors.white70, size: 13),
               SizedBox(width: 6),
-              Text(tr('Spontaneous Heating Index'),
+              Text(tr('ai_powered'),
                   style: TextStyle(color: Colors.white70, fontSize: 11)),
             ]),
           ))),
@@ -1367,6 +1380,14 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
   }
 
   // ── Input Form ───────────────────────────────────────────────────────────────
+  String? Function(String?) _range(double lo, double hi, {bool optional = false}) => (v) {
+        if (optional && (v ?? '').trim().isEmpty) return null;
+        final val = double.tryParse(v ?? '');
+        if (val == null) return 'Invalid';
+        if (val < lo || val > hi) return '${lo.toStringAsFixed(0)}–${hi.toStringAsFixed(0)}';
+        return null;
+      };
+
   Widget _buildInputForm() {
     return Container(
       decoration: BoxDecoration(
@@ -1410,20 +1431,15 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
               child: Column(children: [
                 _buildGradeDropdown(),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _tempController,  label: tr('Temperature'),          unit: '°C',  hint: '25–60',  icon: Icons.thermostat_rounded,  iconColor: const Color(0xFFE53935),
-                  validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < -10 || val > 100) return '–10 to 100'; return null; }),
+                _buildInputField(controller: _tempController, label: tr('coal_temp'),            unit: '°C',  hint: '25–60',   icon: Icons.thermostat_rounded, iconColor: const Color(0xFFE53935), validator: _range(-10, 600)),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _rhController,    label: tr('Relative Humidity'),    unit: '%',   hint: '0–100',  icon: Icons.water_drop_rounded,  iconColor: const Color(0xFF1E88E5),
-                  validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < 0 || val > 100) return '0–100'; return null; }),
+                _buildInputField(controller: _o2Controller,   label: tr('Oxygen (O₂)'),          unit: '%',   hint: '0–21',    icon: Icons.air_rounded,        iconColor: const Color(0xFF43A047), validator: _range(0, 21)),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _o2Controller,    label: tr('Oxygen (O₂)'),          unit: '%',   hint: '0–21',   icon: Icons.air_rounded,         iconColor: const Color(0xFF43A047),
-                  validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < 0 || val > 21) return '0–21'; return null; }),
+                _buildInputField(controller: _coController,   label: tr('Carbon Monoxide (CO)'), unit: 'ppm', hint: '0–500',   icon: Icons.cloud_rounded,      iconColor: const Color(0xFF6D4C41), validator: _range(0, 100000)),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _coController,    label: tr('Carbon Monoxide (CO)'), unit: 'ppb', hint: '0–500',  icon: Icons.cloud_rounded,       iconColor: const Color(0xFF6D4C41),
-                  validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < 0) return '≥ 0'; return null; }),
+                _buildInputField(controller: _co2Controller,  label: tr('co2_optional'),         unit: 'ppm', hint: '400–5000', icon: Icons.cloud_queue_rounded, iconColor: const Color(0xFF1E88E5), validator: _range(0, 1000000, optional: true)),
                 const SizedBox(height: 7),
-                _buildInputField(controller: _finesController, label: tr('Coal Fines'),           unit: '%',   hint: '0–100',  icon: Icons.grain_rounded,       iconColor: const Color(0xFF8D6E63),
-                  validator: (v) { final val = double.tryParse(v ?? ''); if (val == null) return 'Invalid'; if (val < 0 || val > 100) return '0–100'; return null; }),
+                _buildInputField(controller: _c2h4Controller, label: tr('c2h4_optional'),        unit: 'ppm', hint: '0–10',    icon: Icons.local_fire_department_outlined, iconColor: const Color(0xFF8D6E63), validator: _range(0, 100000, optional: true)),
                 const Spacer(),
                 SizedBox(
                   width: double.infinity,
@@ -1433,7 +1449,7 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                         ? const SizedBox(width: 14, height: 14,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.analytics_rounded, size: 16),
-                    label: Text(_loading ? 'Analysing...' : 'Analyse Risk',
+                    label: Text(_loading ? tr('Analysing...') : tr('Analyse Risk'),
                         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primary,
@@ -1523,6 +1539,7 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
 
   // ── Right Panel ───────────────────────────────────────────────────────────────
   Widget _buildRightPanel() {
+    final level = _getRiskLevel(_grade);
     return Column(children: [
       // Riskometer card
       Expanded(
@@ -1551,12 +1568,13 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                 Text(tr('Riskometer'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF1A1A2E))),
                 const Spacer(),
                 if (_analysed)
-                  Container(
+                  Flexible(child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                    decoration: BoxDecoration(color: _getRiskLevel(_riskScore).bgColor, borderRadius: BorderRadius.circular(20)),
-                    child: Text('Score: ${_riskScore.toStringAsFixed(1)} / 100',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _getRiskLevel(_riskScore).color)),
-                  ),
+                    decoration: BoxDecoration(color: level.bgColor, borderRadius: BorderRadius.circular(20)),
+                    child: Text('${tr('grade')} $_grade · ${tr('risk_index')} ${_riskIndex.round()} / 100',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: level.color)),
+                  )),
               ]),
             ),
 
@@ -1574,21 +1592,16 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
                           size: Size(c.maxWidth, c.maxHeight),
                           painter: _RiskometerPainter(
                             score: ds,
-                            levelColor: _analysed ? _getRiskLevel(ds).color : Colors.grey.shade300,
-                            scoreText: _analysed ? ds.toStringAsFixed(1) : '--',
+                            levelColor: _analysed ? _zoneColors[_zoneOf(ds)] : Colors.grey.shade300,
+                            scoreText: _analysed ? _indexAnimation.value.round().toString() : '--',
                           ),
                         )),
                       ),
                       const SizedBox(height: 4),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          _ZoneLabel('LOW',       Color(0xFF2E7D32)),
-                          _ZoneLabel('LOW–MOD',   Color(0xFF558B2F)),
-                          _ZoneLabel('MODERATE',  Color(0xFFF9A825)),
-                          _ZoneLabel('MOD–HIGH',  Color(0xFFEF6C00)),
-                          _ZoneLabel('HIGH',      Color(0xFFD32F2F)),
-                          _ZoneLabel('VERY HIGH', Color(0xFF7B0000)),
+                        children: [
+                          for (var i = 0; i < 6; i++) _ZoneLabel(tr(_levels[i]).toUpperCase(), _zoneColors[i]),
                         ],
                       ),
                     ]);
@@ -1605,19 +1618,20 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
       // Result card
       AnimatedSwitcher(
         duration: const Duration(milliseconds: 400),
-        child: _analysed ? _buildResultCard(_getRiskLevel(_riskScore)) : _buildPlaceholderCard(),
+        child: _analysed ? _buildResultCard(level) : _buildPlaceholderCard(),
       ),
 
       const SizedBox(height: 10),
 
-      // Breakdown card
+      // Model factor contributions
       Expanded(flex: 28, child: _buildBreakdownCard()),
     ]);
   }
 
   Widget _buildResultCard(_RiskLevel level) {
+    final alerts = (_explanation['active_safety_alerts'] as List?)?.length ?? 0;
     return Container(
-      key: ValueKey(level.label),
+      key: ValueKey(_result.hashCode),
       decoration: BoxDecoration(
         color: level.bgColor,
         borderRadius: BorderRadius.circular(10),
@@ -1630,15 +1644,22 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
           child: Icon(level.icon, color: level.color, size: 18)),
         const SizedBox(width: 11),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
+          Wrap(spacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
             Text(level.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: level.color)),
-            const SizedBox(width: 5),
             Text(tr('Risk'), style: TextStyle(fontSize: 12, color: level.color.withValues(alpha: 0.7))),
+            if (alerts > 0)
+              Text('· $alerts ${tr('safety_alerts')}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: level.color)),
           ]),
           const SizedBox(height: 2),
           Text(level.description,
+              maxLines: 3, overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 10, color: level.color.withValues(alpha: 0.85), height: 1.4)),
         ])),
+        TextButton(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RiskAssessmentScreen(monitor: {'zone': tr('Risk Analysis')}, assessment: _result!))),
+          child: Text(tr('details')),
+        ),
       ]),
     );
   }
@@ -1658,22 +1679,19 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
     );
   }
 
-  Widget _buildBreakdownCard() {
-    final T     = double.tryParse(_tempController.text)  ?? 25.0;
-    final RH    = double.tryParse(_rhController.text)    ?? 50.0;
-    final O2    = double.tryParse(_o2Controller.text)    ?? 20.9;
-    final CO    = double.tryParse(_coController.text)    ?? 0.0;
-    final fines = double.tryParse(_finesController.text) ?? 10.0;
-    final gw    = _gradeToRiskWeight(_selectedGrade);
+  static const _featureLabels = {
+    'coal_temp_c': 'coal_temp',
+    'log_co': 'CO',
+    'co_co2': 'CO/CO₂',
+    'graham': "Graham's ratio",
+    'o2_deficit': 'O₂ deficit',
+    'c2h4_present': 'C₂H₄',
+  };
 
-    final items = [
-      _BreakdownItem('Coal Grade ($_selectedGrade)',             gw,                          const Color(0xFFEF6C00), 35),
-      _BreakdownItem('Temperature (${T.toStringAsFixed(0)}°C)', ((T-10)/50).clamp(0.0,1.0),  const Color(0xFFE53935), 20),
-      _BreakdownItem('Humidity (${RH.toStringAsFixed(0)}%)',    ((100-RH)/100).clamp(0.0,1.0),const Color(0xFF1E88E5), 15),
-      _BreakdownItem('CO (${CO.toStringAsFixed(0)} ppb)',        (CO/500).clamp(0.0,1.0),     const Color(0xFF6D4C41), 15),
-      _BreakdownItem('O₂ (${O2.toStringAsFixed(1)}%)',          ((21-O2)/21).clamp(0.0,1.0), const Color(0xFF43A047), 10),
-      _BreakdownItem('Fines (${fines.toStringAsFixed(0)}%)',     (fines/100).clamp(0.0,1.0),  const Color(0xFF8D6E63),  5),
-    ];
+  Widget _buildBreakdownCard() {
+    final ml = ((_result?['ml'] as Map?) ?? {}).cast<String, dynamic>();
+    final contrib = ((ml['contributions'] as Map?) ?? {}).cast<String, dynamic>();
+    final maxAbs = contrib.values.fold<double>(0.01, (m, v) => max(m, (v as num).abs().toDouble()));
 
     return Container(
       decoration: BoxDecoration(
@@ -1695,39 +1713,52 @@ class _RiskAnalysisScreenState extends State<RiskAnalysisScreen>
               decoration: BoxDecoration(color: const Color(0xFFE8F0FB), borderRadius: BorderRadius.circular(6)),
               child: const Icon(Icons.bar_chart_rounded, color: primary, size: 13)),
             const SizedBox(width: 8),
-            Text(tr('Risk Factor Breakdown'),
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF1A1A2E))),
+            Expanded(child: Text(tr('factor_contributions'),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF1A1A2E)))),
+            if (ml['confidence'] != null)
+              Text('${tr('confidence')} ${((ml['confidence'] as num) * 100).round()}%',
+                  style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.w600)),
           ]),
         ),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: items.map((item) {
-                final contrib = (item.normalizedValue * item.weight).toStringAsFixed(1);
-                return Row(children: [
-                  Container(width: 7, height: 7,
-                      decoration: BoxDecoration(color: item.color, shape: BoxShape.circle)),
-                  const SizedBox(width: 7),
-                  SizedBox(width: 160,
-                    child: Text(item.label,
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
-                        overflow: TextOverflow.ellipsis)),
-                  Expanded(child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: item.normalizedValue, minHeight: 6,
-                      backgroundColor: Colors.grey.shade100,
-                      valueColor: AlwaysStoppedAnimation<Color>(item.color),
-                    ),
-                  )),
-                  const SizedBox(width: 7),
-                  Text('$contrib/${item.weight.toInt()}',
-                      style: TextStyle(fontSize: 9, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-                ]);
-              }).toList(),
-            ),
+            child: contrib.isEmpty
+                ? Center(child: Text(tr('Enter values and tap Analyse Risk to see results'),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[400])))
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      for (final e in contrib.entries)
+                        Row(children: [
+                          Container(width: 7, height: 7,
+                              decoration: BoxDecoration(
+                                  color: (e.value as num) >= 0 ? const Color(0xFFD32F2F) : const Color(0xFF2E7D32),
+                                  shape: BoxShape.circle)),
+                          const SizedBox(width: 7),
+                          SizedBox(width: 120,
+                            child: Text(tr(_featureLabels[e.key] ?? e.key),
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis)),
+                          Expanded(child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: ((e.value as num).abs() / maxAbs).clamp(0.02, 1.0).toDouble(), minHeight: 6,
+                              backgroundColor: Colors.grey.shade100,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  (e.value as num) >= 0 ? const Color(0xFFD32F2F) : const Color(0xFF2E7D32)),
+                            ),
+                          )),
+                          const SizedBox(width: 7),
+                          SizedBox(width: 40,
+                            child: Text('${(e.value as num) >= 0 ? '+' : ''}${(e.value as num).toStringAsFixed(2)}',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(fontSize: 9, color: Colors.grey[600], fontWeight: FontWeight.w600))),
+                        ]),
+                      Text(tr('vs_average'), style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+                    ],
+                  ),
           ),
         ),
       ]),
@@ -1892,10 +1923,3 @@ class _RiskLevel {
   const _RiskLevel(this.label, this.color, this.bgColor, this.icon, this.description);
 }
 
-class _BreakdownItem {
-  final String label;
-  final double normalizedValue;
-  final Color  color;
-  final double weight;
-  const _BreakdownItem(this.label, this.normalizedValue, this.color, this.weight);
-}

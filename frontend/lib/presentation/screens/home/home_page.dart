@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:mine_wadhwani/core/routing/app_router.gr.dart';
 import 'package:mine_wadhwani/presentation/bloc/auth_bloc/auth_bloc.dart';
 import 'package:mine_wadhwani/presentation/bloc/auth_bloc/auth_event.dart';
@@ -186,8 +187,10 @@ class HomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header row (wraps on phones)
-                      Wrap(
+                      // Header row (wraps on phones); full width so the buttons sit at the right.
+                      SizedBox(
+                        width: double.infinity,
+                        child: Wrap(
                         alignment: WrapAlignment.spaceBetween,
                         crossAxisAlignment: WrapCrossAlignment.start,
                         spacing: 12,
@@ -277,7 +280,11 @@ class HomePage extends StatelessWidget {
                               ),
                             ],
                           ),
-                          ElevatedButton.icon(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                          Flexible(
+                            child: ElevatedButton.icon(
                             onPressed: () {},
                             icon: const Icon(
                               Icons.phone_in_talk_rounded,
@@ -285,6 +292,7 @@ class HomePage extends StatelessWidget {
                             ),
                             label: Text(
                               tr('Emergency Contact'),
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
@@ -303,7 +311,30 @@ class HomePage extends StatelessWidget {
                               elevation: 0,
                             ),
                           ),
+                          ),
+                          const SizedBox(width: 8),
+                          PopupMenuButton<String>(
+                            tooltip: tr('More apps'),
+                            icon: const Icon(Icons.apps_rounded, color: primary),
+                            onSelected: (url) => launchUrl(
+                              Uri.parse(url),
+                              mode: LaunchMode.externalApplication,
+                            ),
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'https://shield-mine.onrender.com/',
+                                child: Row(children: [
+                                  Icon(Icons.open_in_new_rounded, size: 16),
+                                  SizedBox(width: 8),
+                                  Text('Shield-Mine'),
+                                ]),
+                              ),
+                            ],
+                          ),
+                            ],
+                          ),
                         ],
+                      ),
                       ),
 
                       const SizedBox(height: 24),

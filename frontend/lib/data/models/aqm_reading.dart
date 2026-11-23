@@ -58,12 +58,13 @@ class AqmReading {
   factory AqmReading.fromAqiIn(Map<String, dynamic> data) {
     final sensors = (data['sensors'] as Map?)?.cast<String, dynamic>() ?? {};
     // aqi.in names look like "PM25", "CO2(ppm)", "Temp(cel)"; match on the part before "(".
-    final byName = {
-      for (final e in sensors.entries)
-        if (!e.key.toLowerCase().contains('(fer)')) // skip °F twin of Temp(cel)
-        e.key.toLowerCase().replaceAll(' ', '').split('(').first:
-            ((e.value as Map?)?['value'] as num?)?.toDouble(),
-    };
+    // First sensor wins, so "Temp(cel)" is not overwritten by the uncalibrated "Temp(orignal)".
+    final byName = <String, double?>{};
+    for (final e in sensors.entries) {
+      if (e.key.toLowerCase().contains('(fer)')) continue; // skip °F twin of Temp(cel)
+      byName.putIfAbsent(e.key.toLowerCase().replaceAll(' ', '').split('(').first,
+          () => ((e.value as Map?)?['value'] as num?)?.toDouble());
+    }
     double? pick(List<String> names) {
       for (final n in names) {
         if (byName[n] != null) return byName[n];

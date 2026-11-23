@@ -1,6 +1,6 @@
 import ApiResponse from "../Utils/Apiresponse.js";
 import { RiskMonitorModel, RiskReadingModel, RiskAssessmentModel } from "../Models/risk_monitor.model.js";
-import { assessMonitor } from "../Services/risk_monitor.js";
+import { assessMonitor, assessReading, explainAssessment } from "../Services/risk_monitor.js";
 import { ENVIRONMENTS, SITE_PROCEDURES } from "../Services/site_procedures.js";
 import { track } from "../Services/agent_registry.js";
 import { languageFromReq } from "../Utils/llm.js";
@@ -8,6 +8,17 @@ import { mineScope } from "../Utils/mine_scope.js";
 import { MODEL_INFO } from "../ml/heating_model.js";
 
 const num = (v) => (v === "" || v === null || v === undefined ? undefined : Number(v));
+
+// Validated sensor values from a request body -> { vals } or { error }.
+const readValues = (b, extra = []) => {
+  const vals = {};
+  for (const k of ["coal_temp_c", "co_ppm", "co2_ppm", "o2_pct", "c2h4_ppm", ...extra]) vals[k] = num(b[k]);
+  const bad = Object.entries(vals).filter(([, v]) => v !== undefined && !Number.isFinite(v));
+  if (bad.length) return { error: `Not a number: ${bad.map(([k]) => k).join(", ")}` };
+  if (Object.values(vals).every((v) => v === undefined)) return { error: "Enter at least one reading" };
+  if (vals.o2_pct !== undefined && (vals.o2_pct < 0 || vals.o2_pct > 21)) return { error: "o2_pct must be 0-21" };
+  return { vals };
+};
 
 // GET /risk-monitor/monitors -> zones with their latest assessment
 const list_monitors = async (req, res) => {
@@ -46,14 +57,29 @@ const add_reading = async (req, res) => {
     const m = await RiskMonitorModel.findById(req.params.id).lean();
     if (!m) return res.status(404).json(ApiResponse.error("Monitored zone not found", 404));
     const b = req.body ?? {};
-    const vals = { coal_temp_c: num(b.coal_temp_c), co_ppm: num(b.co_ppm), co2_ppm: num(b.co2_ppm), o2_pct: num(b.o2_pct), c2h4_ppm: num(b.c2h4_ppm) };
-    const bad = Object.entries(vals).filter(([, v]) => v !== undefined && !Number.isFinite(v));
-    if (bad.length) return res.status(400).json(ApiResponse.error(`Not a number: ${bad.map(([k]) => k).join(", ")}`, 400));
-    if (Object.values(vals).every((v) => v === undefined)) return res.status(400).json(ApiResponse.error("Enter at least one reading", 400));
-    if (vals.o2_pct !== undefined && (vals.o2_pct < 0 || vals.o2_pct > 21)) return res.status(400).json(ApiResponse.error("o2_pct must be 0-21", 400));
+    const { vals, error } = readValues(b);
+    if (error) return res.status(400).json(ApiResponse.error(error, 400));
     await RiskReadingModel.create({ monitor: m._id, source: "manual", ...vals, note: b.note, createdBy: req.user._id });
     const doc = await track("risk_monitor", () => assessMonitor(m, { language: languageFromReq(req), force: true }), (d) => `${m.zone}: ${d?.level}`);
     return res.status(201).json(ApiResponse.success(doc, "Reading saved and assessed", 201));
+  } catch (error) {
+    return res.status(500).json(ApiResponse.error(error.message, 500));
+  }
+};
+
+// POST /risk-monitor/assess { coal_temp_c, co_ppm, co2_ppm, o2_pct, c2h4_ppm, humidity_pct, coal_grade, fines_pct, environment }
+// One-off assessment for the Risk Analysis screen: same model, rules and AI explanation as the monitor, nothing saved.
+const assess_once = async (req, res) => {
+  try {
+    const b = req.body ?? {};
+    const { vals, error } = readValues(b, ["humidity_pct"]);
+    if (error) return res.status(400).json(ApiResponse.error(error, 400));
+    const coal_grade = /^G([1-9]|1[0-4])$/.test(b.coal_grade) ? b.coal_grade : "G7";
+    const environment = ENVIRONMENTS.includes(b.environment) ? b.environment : "surface_stockpile";
+    const monitor = { zone: "Risk Analysis", mine_name: b.mine_name ?? "", environment, coal_grade, fines_pct: num(b.fines_pct) ?? 15 };
+    const a = assessReading(monitor, vals, []);
+    const { explanation, aiGenerated } = await track("risk_monitor", () => explainAssessment(monitor, a, languageFromReq(req)), () => `Risk Analysis: ${a.level}`);
+    return res.status(200).json(ApiResponse.success({ ...a, explanation, aiGenerated, createdAt: new Date() }));
   } catch (error) {
     return res.status(500).json(ApiResponse.error(error.message, 500));
   }
@@ -77,4 +103,4 @@ const history = async (req, res) => {
 const model_card = (req, res) =>
   res.status(200).json(ApiResponse.success({ ...MODEL_INFO, procedures: SITE_PROCEDURES }));
 
-export { list_monitors, upsert_monitor, add_reading, history, model_card };
+export { list_monitors, upsert_monitor, add_reading, assess_once, history, model_card };
